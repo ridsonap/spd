@@ -1,6 +1,6 @@
 /**
  * Generator Surat Tugas, SPD, dan Surat Pernyataan BPS Kabupaten Kepulauan Selayar
- * Format: Nur Jannah (Single & Batch Excel Mode)
+ * Format: Master Template BPS (Mode Satuan & Batch Excel)
  */
 
 (function () {
@@ -16,6 +16,18 @@
 
     // Single Form
     form: document.getElementById('generator-form'),
+    radioOrganik: document.getElementById('radio-organik'),
+    radioNonorganik: document.getElementById('radio-nonorganik'),
+    labelPetugasOrganik: document.getElementById('label-petugas-organik'),
+    labelPetugasNonorganik: document.getElementById('label-petugas-nonorganik'),
+    containerOrganik: document.getElementById('container-organik'),
+    containerNonorganik: document.getElementById('container-nonorganik'),
+    selectPegawaiOrganik: document.getElementById('select-pegawai-organik'),
+    organikInfoText: document.getElementById('organik-info-text'),
+    inputNama: document.getElementById('input-nama'),
+    inputNip: document.getElementById('input-nip'),
+    inputJabatan: document.getElementById('input-jabatan'),
+
     noSurat: document.getElementById('input-no-surat'),
     tglSpd: document.getElementById('input-tgl-spd'),
     tglSpdPreview: document.getElementById('tgl-spd-preview'),
@@ -27,11 +39,11 @@
     inputTujuan: document.getElementById('input-tujuan'),
     inputPembebanan: document.getElementById('input-pembebanan'),
     inputUraianBeban: document.getElementById('input-uraian-beban'),
-    inputNama: document.getElementById('input-nama'),
-    inputNip: document.getElementById('input-nip'),
     inputTglSt: document.getElementById('input-tgl-st'),
+    inputUnitKerja: document.getElementById('input-unit-kerja'),
     accordionToggle: document.getElementById('accordion-toggle'),
     accordionContent: document.getElementById('accordion-content'),
+    accordionIndicator: document.getElementById('accordion-indicator'),
 
     // Single Summary
     sumNoSt: document.getElementById('sum-no-st'),
@@ -40,6 +52,7 @@
     sumWaktu: document.getElementById('sum-waktu'),
     sumKecamatan: document.getElementById('sum-kecamatan'),
     sumPetugas: document.getElementById('sum-petugas'),
+    sumJabatan: document.getElementById('sum-jabatan'),
 
     // Single Actions
     btnGenerate: document.getElementById('btn-generate'),
@@ -71,6 +84,7 @@
     pdfViewer: document.getElementById('pdf-viewer'),
     emptyState: document.getElementById('empty-state'),
     toast: document.getElementById('toast'),
+    toastText: document.getElementById('toast-text'),
   };
 
   // State
@@ -81,6 +95,7 @@
     mergedBlobUrl: null,
     activeTab: 'merged',
     batchData: [],
+    petugasMode: 'organik', // 'organik' | 'nonorganik'
   };
 
   const INDO_MONTHS = [
@@ -172,7 +187,7 @@
 
   /**
    * Build dynamic middle block for Surat Tugas (Tujuan, Waktu, Pembebanan)
-   * Automatically adapts Y-positions whether Tujuan is 1 line, 2 lines, 3 lines, or more!
+   * Automatically adapts Y-positions whether Tujuan is 1 line, 2 lines, 3 lines, or more
    */
   function buildMiddleBlockST(opts) {
     const kecFormatted = formatKecamatan(opts.kecamatan);
@@ -225,8 +240,9 @@
    * Toast notification
    */
   function showToast(msg) {
-    el.toast.textContent = msg;
-    el.toast.style.display = 'block';
+    if (el.toastText) el.toastText.textContent = msg;
+    else el.toast.textContent = msg;
+    el.toast.style.display = 'inline-flex';
     setTimeout(() => {
       el.toast.style.display = 'none';
     }, 3000);
@@ -258,6 +274,72 @@
   }
 
   /**
+   * Populate Pegawai Organik dropdown
+   */
+  function populatePegawaiDropdown() {
+    const list = window.PEGAWAI_ORGANIK || [];
+    el.selectPegawaiOrganik.innerHTML = '';
+
+    list.forEach((p, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `${p.nama} — ${p.jabatan}`;
+      el.selectPegawaiOrganik.appendChild(opt);
+    });
+
+    // Default select index 18 (Ridson Al Farizal P., S.Tr.Stat.) or 0
+    if (list.length > 18) {
+      el.selectPegawaiOrganik.selectedIndex = 18;
+    } else if (list.length > 0) {
+      el.selectPegawaiOrganik.selectedIndex = 0;
+    }
+
+    updateOrganikBadge();
+  }
+
+  /**
+   * Update selected organic staff info badge
+   */
+  function updateOrganikBadge() {
+    const list = window.PEGAWAI_ORGANIK || [];
+    const idx = parseInt(el.selectPegawaiOrganik.value, 10);
+    const p = list[idx];
+    if (p) {
+      el.organikInfoText.textContent = `NIP: ${p.nip} | Gol: ${p.golongan || '-'} | Jabatan: ${p.jabatan}`;
+    }
+  }
+
+  /**
+   * Get current active petugas details
+   */
+  function getCurrentPetugas() {
+    if (state.petugasMode === 'organik') {
+      const list = window.PEGAWAI_ORGANIK || [];
+      const idx = parseInt(el.selectPegawaiOrganik.value, 10);
+      const p = list[idx] || {
+        nama: 'RIDSON AL FARIZAL P., S.TR.STAT.',
+        nip: '200110192023101002',
+        jabatan: 'Statistisi Ahli Pertama'
+      };
+      return {
+        isOrganik: true,
+        nama: p.nama,
+        nip: p.nip,
+        jabatan: p.jabatan,
+        unitKerja: el.inputUnitKerja.value || 'BPS Kabupaten Kepulauan Selayar'
+      };
+    } else {
+      return {
+        isOrganik: false,
+        nama: el.inputNama.value || 'NUR JANNAH',
+        nip: el.inputNip.value || '7301034811760004',
+        jabatan: el.inputJabatan.value || 'Petugas Lapangan Sensus (PPL Sensus)',
+        unitKerja: el.inputUnitKerja.value || ''
+      };
+    }
+  }
+
+  /**
    * Update live summary
    */
   function updateSummary() {
@@ -273,13 +355,15 @@
 
     const { stNo, spdNo } = formatNomor(el.noSurat.value);
     const kec = formatKecamatan(el.selectKecamatan.value);
+    const petugas = getCurrentPetugas();
 
     el.sumNoSt.textContent = stNo;
     el.sumNoSpd.textContent = spdNo;
     el.sumTglSpd.textContent = tglSpdIndo;
     el.sumWaktu.textContent = `${tglMulaiIndo} s.d. ${tglSelesaiIndo}`;
     el.sumKecamatan.textContent = kec;
-    el.sumPetugas.textContent = `${el.inputNama.value || 'NUR JANNAH'} (${el.inputNip.value || '7301034811760004'})`;
+    el.sumPetugas.textContent = `${petugas.nama} (${petugas.nip}) [${petugas.isOrganik ? 'Organik' : 'Mitra'}]`;
+    el.sumJabatan.textContent = petugas.jabatan;
   }
 
   /**
@@ -294,18 +378,21 @@
 
     const { stNo } = formatNomor(opts.noSurat);
 
-    // Nomor
+    // 1. Nomor
     text = text.replace('B-114.21/7301/SS.330/2026', stNo);
 
-    // Dynamic Middle Block: Tujuan, Waktu, Pembebanan (handles 1 line, 2 lines, 3 lines, etc.)
-    const middleRegex = /BT 58\.943 499\.179 Td \/F1 12\.0 Tf  \[\(Tujuan\/Tugas\)\] TJ ET[\s\S]*?BT 222\.443 433\.155 Td \/F1 12\.0 Tf  \[\(Transport Daerah Sulit\)\] TJ ET/;
+    // 2. Nama Petugas
+    text = text.replaceAll('NUR JANNAH', (opts.nama || 'NUR JANNAH').trim().toUpperCase());
+
+    // 3. Jabatan Petugas
+    text = text.replace(/Petugas Lapangan Sensus \\\([^\)]*\\\)/, escapePdfText(opts.jabatan || 'Petugas Lapangan Sensus (PPL Sensus)'));
+
+    // 4. Dynamic Middle Block: Tujuan, Waktu, Pembebanan
+    const middleRegex = /BT 58\.943 499\\.179 Td \/F1 12\.0 Tf  \[\(Tujuan\/Tugas\)\] TJ ET[\s\S]*?BT 222\.443 433\.155 Td \/F1 12\.0 Tf  \[\(Transport Daerah Sulit\)\] TJ ET/;
     const newMiddle = buildMiddleBlockST(opts);
     text = text.replace(middleRegex, newMiddle);
 
-    // Nama & Tanggal TTD
-    if (opts.nama) {
-      text = text.replaceAll('NUR JANNAH', opts.nama.trim().toUpperCase());
-    }
+    // 5. Tanggal TTD ST
     if (opts.tglSt) {
       text = text.replace('Kepulauan Selayar, 15 Juni 2026', `Kepulauan Selayar, ${formatIndoDate(opts.tglSt)}`);
     }
@@ -356,11 +443,20 @@
     text = text.replace('pelaksanaan tanggal 20 Juli 2026', `pelaksanaan tanggal ${tglPelaksanaan}`);
     text = text.replace('Kepulauan Selayar, 20 Juli 2026', `Kepulauan Selayar, ${tglSpd}`);
 
-    if (opts.nama) {
-      text = text.replaceAll('NUR JANNAH', opts.nama.trim().toUpperCase());
-    }
-    if (opts.nip) {
-      text = text.replaceAll('7301034811760004', opts.nip.trim());
+    // Nama & NIP (Both top and signature bottom)
+    text = text.replaceAll('NUR JANNAH', (opts.nama || 'NUR JANNAH').trim().toUpperCase());
+    text = text.replaceAll('7301034811760004', (opts.nip || '7301034811760004').trim());
+
+    // Jabatan in Super
+    const superJabatan = opts.isOrganik ? (opts.jabatan || 'Statistisi Ahli Pertama') : (opts.jabatanSuper || opts.jabatan || 'Mitra Sensus/Survei');
+    text = text.replace('Mitra Sensus/Survei', escapePdfText(superJabatan));
+
+    // Unit Kerja for Organik
+    const unitKerjaVal = opts.unitKerja || (opts.isOrganik ? 'BPS Kabupaten Kepulauan Selayar' : '');
+    if (unitKerjaVal) {
+      const targetUK = 'BT 146.665 594.067 Td /F1 11.2 Tf  [(:)] TJ ET';
+      const addition = targetUK + '\n' + `BT 163.293 594.067 Td /F1 11.2 Tf  [(${escapePdfText(unitKerjaVal)})] TJ ET`;
+      text = text.replace(targetUK, addition);
     }
 
     page.node.set(PDFName.of('Contents'), doc.context.register(doc.context.flateStream(new TextEncoder().encode(text))));
@@ -388,11 +484,12 @@
   async function generateSingle() {
     try {
       el.btnGenerate.disabled = true;
-      el.btnGenerate.textContent = '⏳ Memproses PDF...';
+      el.btnGenerate.innerHTML = '<i class="bi bi-hourglass-split"></i> Memproses PDF...';
 
       const tglSpdVal = el.tglSpd.value || '2026-07-20';
       const tglMulaiVal = el.syncDatesCheckbox.checked ? tglSpdVal : (el.tglMulai.value || tglSpdVal);
       const tglSelesaiVal = el.syncDatesCheckbox.checked ? tglSpdVal : (el.tglSelesai.value || tglMulaiVal);
+      const petugas = getCurrentPetugas();
 
       const opts = {
         noSurat: el.noSurat.value || 'B-11/7301/VS.330/2026',
@@ -403,8 +500,11 @@
         tujuan: el.inputTujuan.value,
         pembebanan: el.inputPembebanan.value,
         uraianBeban: el.inputUraianBeban.value,
-        nama: el.inputNama.value,
-        nip: el.inputNip.value,
+        isOrganik: petugas.isOrganik,
+        nama: petugas.nama,
+        nip: petugas.nip,
+        jabatan: petugas.jabatan,
+        unitKerja: petugas.unitKerja,
         tglSt: el.inputTglSt.value
       };
 
@@ -446,13 +546,13 @@
       el.btnPrint.disabled = false;
 
       updateViewerTab(state.activeTab);
-      showToast('✓ Berkas berhasil di-generate!');
+      showToast('Berkas berhasil di-generate!');
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan: ' + err.message);
     } finally {
       el.btnGenerate.disabled = false;
-      el.btnGenerate.innerHTML = '⚡ Generate Dokumen';
+      el.btnGenerate.innerHTML = '<i class="bi bi-lightning-charge"></i> Generate Dokumen';
     }
   }
 
@@ -531,10 +631,12 @@
         'Nomor Surat': 'B-11/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-20',
         'Kecamatan': 'Bontomatene',
+        'Kategori': 'Organik',
+        'Nama Petugas': 'Ridson Al Farizal P., S.Tr.Stat.',
+        'NIP': '200110192023101002',
+        'Jabatan': 'Statistisi Ahli Pertama',
         'Tanggal Mulai': '2026-07-20',
         'Tanggal Selesai': '2026-07-20',
-        'Nama Petugas': 'NUR JANNAH',
-        'NIP': '7301034811760004',
         'Tujuan': 'Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan Bontomatene',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
         'Uraian Pembebanan': 'Transport Daerah Sulit'
@@ -543,10 +645,12 @@
         'Nomor Surat': 'B-12/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-24',
         'Kecamatan': 'Bontomatene',
-        'Tanggal Mulai': '2026-07-24',
-        'Tanggal Selesai': '2026-07-24',
+        'Kategori': 'Non-Organik',
         'Nama Petugas': 'NUR JANNAH',
         'NIP': '7301034811760004',
+        'Jabatan': 'Mitra Sensus/Survei',
+        'Tanggal Mulai': '2026-07-24',
+        'Tanggal Selesai': '2026-07-24',
         'Tujuan': 'Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan Bontomatene',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
         'Uraian Pembebanan': 'Transport Daerah Sulit'
@@ -555,11 +659,13 @@
         'Nomor Surat': 'B-13/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-29',
         'Kecamatan': 'Benteng',
+        'Kategori': 'Organik',
+        'Nama Petugas': 'Takdir Khauripan, S.Si.',
+        'NIP': '198704262011011006',
+        'Jabatan': 'Kepala Subbagian Umum',
         'Tanggal Mulai': '2026-07-29',
         'Tanggal Selesai': '2026-07-29',
-        'Nama Petugas': 'NUR JANNAH',
-        'NIP': '7301034811760004',
-        'Tujuan': 'Translok Petugas Pendataan SE2026 di Kecamatan Benteng',
+        'Tujuan': 'Koordinasi dan Evaluasi Administrasi di Kecamatan Benteng',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
         'Uraian Pembebanan': 'Transport Daerah Sulit'
       }
@@ -590,6 +696,8 @@
           return;
         }
 
+        const orgList = window.PEGAWAI_ORGANIK || [];
+
         // Normalize keys
         state.batchData = json.map((row, idx) => {
           const getVal = (patterns) => {
@@ -609,8 +717,27 @@
           const kecamatan = getVal(['kecamatan', 'wilayah']) || 'Bontomatene';
           const tglMulai = parseExcelDate(getVal(['tanggal mulai', 'tgl mulai', 'mulai'])) || tglSpd;
           const tglSelesai = parseExcelDate(getVal(['tanggal selesai', 'tgl selesai', 'selesai'])) || tglMulai;
-          const nama = getVal(['nama petugas', 'nama', 'petugas']) || 'NUR JANNAH';
-          const nip = getVal(['nip', 'nik']) || '7301034811760004';
+          
+          let nama = String(getVal(['nama petugas', 'nama', 'petugas']) || '').trim();
+          let nip = String(getVal(['nip', 'nik']) || '').trim();
+          let jabatan = String(getVal(['jabatan']) || '').trim();
+          let kategori = String(getVal(['kategori', 'status']) || '').trim().toLowerCase();
+
+          // Auto detect organic pegawai
+          let isOrganik = kategori.includes('organik') && !kategori.includes('non');
+          if (nama) {
+            const matched = orgList.find(p => p.nama.toLowerCase().includes(nama.toLowerCase()) || nama.toLowerCase().includes(p.nama.toLowerCase()));
+            if (matched) {
+              isOrganik = true;
+              if (!nip) nip = matched.nip;
+              if (!jabatan) jabatan = matched.jabatan;
+            }
+          }
+
+          if (!nama) nama = 'NUR JANNAH';
+          if (!nip) nip = '7301034811760004';
+          if (!jabatan) jabatan = isOrganik ? 'Statistisi Ahli Pertama' : 'Mitra Sensus/Survei';
+
           const tujuan = getVal(['tujuan', 'tugas']) || `Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan ${kecamatan}`;
           const pembebanan = getVal(['pembebanan akun', 'pembebanan', 'akun']) || 'GG 2902 BMA 006 530 B 524113 2';
           const uraianBeban = getVal(['uraian pembebanan', 'uraian beban', 'uraian']) || 'Transport Daerah Sulit';
@@ -621,8 +748,10 @@
             kecamatan: String(kecamatan).trim(),
             tglMulai: String(tglMulai).trim(),
             tglSelesai: String(tglSelesai).trim(),
+            isOrganik,
             nama: String(nama).trim(),
             nip: String(nip).trim(),
+            jabatan: String(jabatan).trim(),
             tujuan: String(tujuan).trim(),
             pembebanan: String(pembebanan).trim(),
             uraianBeban: String(uraianBeban).trim()
@@ -647,12 +776,17 @@
 
     state.batchData.forEach((row, i) => {
       const tr = document.createElement('tr');
+      const badgeHtml = row.isOrganik
+        ? '<span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:600;font-size:0.7rem;">Organik</span>'
+        : '<span style="background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-weight:600;font-size:0.7rem;">Mitra</span>';
+
       tr.innerHTML = `
         <td>${i + 1}</td>
         <td><strong>${row.noSurat}</strong></td>
         <td>${formatIndoDate(row.tglSpd)}</td>
         <td>${row.kecamatan}</td>
         <td>${row.nama}</td>
+        <td>${badgeHtml}</td>
       `;
       el.batchTbody.appendChild(tr);
     });
@@ -721,7 +855,7 @@
       const url = URL.createObjectURL(blob);
 
       triggerDownload(url, `Bundel_Semua_SPD_${total}_Data.pdf`);
-      showToast(`✓ Berhasil mengunduh ${total} set dokumen!`);
+      showToast(`Berhasil mengunduh ${total} set dokumen!`);
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan saat memproses batch PDF: ' + err.message);
@@ -778,7 +912,6 @@
         ]);
 
         const cleanNo = row.noSurat.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const cleanTgl = (formatIndoDate(row.tglSpd) || 'SPD').replace(/[^a-zA-Z0-9]/g, '_');
         const folderName = `${String(i + 1).padStart(2, '0')}_${cleanNo}`;
         const folder = zip.folder(folderName);
 
@@ -793,7 +926,7 @@
       const url = URL.createObjectURL(zipContent);
 
       triggerDownload(url, `Paket_SPD_Batch_${total}_Data.zip`);
-      showToast(`✓ Berhasil membuat arsip ZIP (${total} data)!`);
+      showToast(`Berhasil membuat arsip ZIP (${total} data)!`);
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan saat memproses batch ZIP: ' + err.message);
@@ -801,6 +934,60 @@
       el.btnGenerateBatchPdf.disabled = false;
       el.btnGenerateBatchZip.disabled = false;
       el.batchProgress.style.display = 'none';
+    }
+  }
+
+  /**
+   * Try background sync with Google Sheet if accessible
+   */
+  async function trySyncGoogleSheet() {
+    try {
+      const url = 'https://docs.google.com/spreadsheets/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/export?format=csv&gid=2128965247';
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const csv = await res.text();
+      const lines = csv.split('\n');
+      const results = [];
+      for (let i = 4; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line.startsWith(',Last Update') || line.startsWith(',30/04/2026')) continue;
+        const matches = [];
+        let inQuotes = false;
+        let current = '';
+        for (let c = 0; c < line.length; c++) {
+          const ch = line[c];
+          if (ch === '"') {
+            inQuotes = !inQuotes;
+          } else if (ch === ',' && !inQuotes) {
+            matches.push(current.trim());
+            current = '';
+          } else {
+            current += ch;
+          }
+        }
+        matches.push(current.trim());
+        const nama = matches[2];
+        const nipBaru = matches[5];
+        const gol = matches[6] || '';
+        const pangkat = matches[7] || '';
+        const jabatan = (matches[8] || '').trim().replace(/\s+BPS Kabupaten\/Kota/g, '');
+        if (nama && nipBaru) {
+          results.push({
+            nama: nama.trim(),
+            nip: nipBaru.trim(),
+            jabatan: jabatan.trim() || 'Fungsional Umum',
+            golongan: gol.trim(),
+            pangkat: pangkat.trim()
+          });
+        }
+      }
+      if (results.length > 0) {
+        window.PEGAWAI_ORGANIK = results;
+        populatePegawaiDropdown();
+        updateSummary();
+      }
+    } catch (e) {
+      // Offline or CORS protected, seamlessly rely on pegawai.js
     }
   }
 
@@ -821,6 +1008,35 @@
       el.modeSingleBtn.classList.remove('active');
       el.singleModeSection.style.display = 'none';
       el.batchModeSection.style.display = 'block';
+    });
+
+    // Petugas Type Switch (Organik vs Non-Organik)
+    el.radioOrganik.addEventListener('change', () => {
+      if (el.radioOrganik.checked) {
+        state.petugasMode = 'organik';
+        el.labelPetugasOrganik.classList.add('active');
+        el.labelPetugasNonorganik.classList.remove('active');
+        el.containerOrganik.style.display = 'block';
+        el.containerNonorganik.style.display = 'none';
+        updateOrganikBadge();
+        updateSummary();
+      }
+    });
+
+    el.radioNonorganik.addEventListener('change', () => {
+      if (el.radioNonorganik.checked) {
+        state.petugasMode = 'nonorganik';
+        el.labelPetugasNonorganik.classList.add('active');
+        el.labelPetugasOrganik.classList.remove('active');
+        el.containerOrganik.style.display = 'none';
+        el.containerNonorganik.style.display = 'block';
+        updateSummary();
+      }
+    });
+
+    el.selectPegawaiOrganik.addEventListener('change', () => {
+      updateOrganikBadge();
+      updateSummary();
     });
 
     // Kecamatan change: auto update tujuan text if it contains standard template
@@ -854,15 +1070,18 @@
 
     [
       el.noSurat, el.tglMulai, el.tglSelesai, el.inputTujuan,
-      el.inputPembebanan, el.inputUraianBeban, el.inputNama, el.inputNip
+      el.inputPembebanan, el.inputUraianBeban, el.inputNama, el.inputNip,
+      el.inputJabatan, el.inputUnitKerja
     ].forEach(input => {
-      input.addEventListener('input', updateSummary);
+      if (input) input.addEventListener('input', updateSummary);
     });
 
     el.accordionToggle.addEventListener('click', () => {
       el.accordionContent.classList.toggle('open');
       const isOpen = el.accordionContent.classList.contains('open');
-      el.accordionToggle.querySelector('span:last-child').textContent = isOpen ? '▲ Sembunyikan' : '▼ Tampilkan';
+      el.accordionIndicator.innerHTML = isOpen
+        ? '<i class="bi bi-chevron-up"></i> Sembunyikan'
+        : '<i class="bi bi-chevron-down"></i> Tampilkan';
     });
 
     el.form.addEventListener('submit', (e) => {
@@ -941,9 +1160,11 @@
 
   // Init
   function init() {
+    populatePegawaiDropdown();
     updateSummary();
     initListeners();
     generateSingle();
+    trySyncGoogleSheet();
   }
 
   if (document.readyState === 'loading') {

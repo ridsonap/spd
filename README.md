@@ -13,17 +13,21 @@ Aplikasi web statis client-side untuk membuat dokumen administrasi resmi perjala
 ## Fitur Utama
 
 - **100% Client-Side**: Berjalan langsung di peramban tanpa server backend atau ketergantungan API eksternal. Data tetap privat di perangkat pengguna.
+- **Desain Bersih & Profesional**: Menggunakan **Bootstrap Icons** dan favicon SVG resmi (bebas emoji).
+- **Pilihan Kategori Petugas**:
+  - **Pegawai Organik BPS**: Terhubung langsung dengan database 26 pegawai BPS Kabupaten Kepulauan Selayar dari [Google Spreadsheet](https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247). Otomatis mengisi Nama, NIP Baru, Jabatan, Golongan, dan Unit Kerja.
+  - **Non-Organik / Mitra**: Opsi input manual lengkap untuk Nama, NIP/NIK, dan Jabatan (misal Mitra Sensus/Survei / PPL).
 - **Form Satuan**:
   - **Nomor Surat Lengkap**: Input nomor surat tugas lengkap (default: `B-11/7301/VS.330/2026`). Di SPD, awalan `B-` otomatis dihilangkan sesuai standar penomoran SPD BPS.
   - **Tanggal SPD & Surat Pernyataan**: Otomatis dikonversi ke format penanggalan resmi BPS (misal: `20 Juli 2026`).
   - **Dropdown Kecamatan**: Pilihan langsung 11 kecamatan di Kabupaten Kepulauan Selayar.
   - **Tanggal Perjalanan**: Default tersinkronisasi 1 hari dengan tanggal SPD, atau tentukan rentang tanggal perjalanan dinas.
-  - **Tujuan & Pembebanan**: Input fleksibel untuk Tujuan/Tugas (terbagi proporsional 2 baris di Surat Tugas), Kode Akun Pembebanan MAK, serta Uraian Pembebanan.
-  - **Pengaturan Petugas**: Nama Petugas, NIP/NIK, dan Tanggal TTD Surat Tugas (default: `NUR JANNAH`, NIP: `7301034811760004`, Tgl TTD ST: `15 Juni 2026`).
+  - **Tujuan Dinamis (Dynamic Reflow)**: Input fleksibel untuk Tujuan/Tugas (otomatis menyesuaikan Y-posisi tanpa bertumpuk untuk 1 baris, 2 baris, atau 3+ baris).
+  - **Pembebanan**: Kode Akun Pembebanan MAK dan Uraian Pembebanan.
 - **Batch Generator (Upload Excel)**:
-  - Tombol **Unduh Template Excel** (`.xlsx`) siap pakai dengan contoh data.
+  - Tombol **Unduh Template Excel** (`.xlsx`) siap pakai dengan contoh data Organik & Mitra.
   - Unggah file Excel (`.xlsx`, `.xls`, `.csv`) dengan drag & drop atau browse file.
-  - Pratinjau tabel interaktif data yang terbaca.
+  - Otomatis mencocokkan data petugas organik jika nama sesuai database.
   - Unduh **1 Bundel PDF Gabungan Siap Cetak** (semua petugas & tanggal terangkum urut).
   - Unduh **Paket Arsip ZIP** (berkas PDF tersimpan rapi per subfolder).
 - **Pratinjau Interaktif & Cetak**: Pratinjau langsung per tab dokumen dan tombol cetak langsung.

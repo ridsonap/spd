@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generator SPD, Surat Tugas & Super - BPS Selayar</title>
-  <meta name="description" content="Generator dokumen perjalanan dinas (Surat Tugas, SPD, Surat Pernyataan) resmi BPS Kabupaten Kepulauan Selayar format Nur Jannah.">
+  <title>Generator SPD, Surat Tugas &amp; Super - BPS Selayar</title>
+  <meta name="description" content="Generator dokumen perjalanan dinas (Surat Tugas, SPD, Surat Pernyataan) resmi BPS Kabupaten Kepulauan Selayar.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
 </head>
 <body>
 
@@ -21,7 +22,7 @@
         </div>
       </div>
       <div class="header-status">
-        <span class="badge-tag">Format Resmi • BPS Selayar</span>
+        <span class="badge-tag"><i class="bi bi-patch-check"></i> Format Resmi • BPS Selayar</span>
       </div>
     </div>
   </header>
@@ -36,10 +37,10 @@
         <!-- Mode Switch: Single vs Batch -->
         <div class="mode-switch">
           <button type="button" id="mode-single-btn" class="mode-btn active">
-            📄 Form Satuan
+            <i class="bi bi-file-earmark-text"></i> Form Satuan
           </button>
           <button type="button" id="mode-batch-btn" class="mode-btn">
-            📊 Upload Excel (Batch)
+            <i class="bi bi-file-earmark-spreadsheet"></i> Upload Excel (Batch)
           </button>
         </div>
 
@@ -47,9 +48,54 @@
         <div id="single-mode-section">
           <div class="card">
             <h2 class="card-title">
-              <span>📝 Parameter Dokumen</span>
+              <span><i class="bi bi-sliders"></i> Parameter Dokumen</span>
             </h2>
             <form id="generator-form">
+
+              <!-- Kategori Petugas: Organik vs Non-Organik -->
+              <div class="form-group">
+                <label class="form-label">Kategori Petugas *</label>
+                <div class="petugas-segmented">
+                  <label class="segment-btn active" id="label-petugas-organik">
+                    <input type="radio" name="petugas_type" id="radio-organik" value="organik" checked>
+                    <i class="bi bi-person-badge"></i> Pegawai Organik BPS
+                  </label>
+                  <label class="segment-btn" id="label-petugas-nonorganik">
+                    <input type="radio" name="petugas_type" id="radio-nonorganik" value="nonorganik">
+                    <i class="bi bi-pencil-square"></i> Non-Organik / Mitra (Manual)
+                  </label>
+                </div>
+              </div>
+
+              <!-- Pilihan Pegawai Organik -->
+              <div id="container-organik" class="form-group">
+                <label class="form-label" for="select-pegawai-organik">Pilih Pegawai BPS Selayar *</label>
+                <select id="select-pegawai-organik" class="form-select">
+                  <!-- Populated from pegawai.js -->
+                </select>
+                <div id="organik-info-badge" class="organik-badge-info">
+                  <i class="bi bi-info-circle"></i>
+                  <span id="organik-info-text">Memuat data pegawai...</span>
+                </div>
+              </div>
+
+              <!-- Isian Manual Non-Organik / Mitra -->
+              <div id="container-nonorganik" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label" for="input-nama">Nama Petugas *</label>
+                  <input type="text" id="input-nama" class="form-input" value="NUR JANNAH" placeholder="Contoh: NUR JANNAH">
+                </div>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label" for="input-nip">NIP / NIK *</label>
+                    <input type="text" id="input-nip" class="form-input" value="7301034811760004" placeholder="18 digit NIP / 16 digit NIK">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="input-jabatan">Jabatan *</label>
+                    <input type="text" id="input-jabatan" class="form-input" value="Petugas Lapangan Sensus (PPL Sensus)" placeholder="Contoh: Mitra Sensus/Survei">
+                  </div>
+                </div>
+              </div>
 
               <!-- Nomor Surat Lengkap -->
               <div class="form-group">
@@ -105,7 +151,7 @@
               <div class="form-group">
                 <label class="form-label" for="input-tujuan">Tujuan / Tugas Perjalanan Dinas *</label>
                 <textarea id="input-tujuan" class="form-textarea" rows="2" required>Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan Bontomatene</textarea>
-                <div class="form-hint">Disesuaikan otomatis saat mengganti kecamatan atau bisa diedit bebas.</div>
+                <div class="form-hint">Disesuaikan otomatis saat mengganti kecamatan atau bisa diedit bebas (otomatis reflow 1 baris, 2 baris, atau 3+ baris tanpa bertumpuk).</div>
               </div>
 
               <!-- Pembebanan Anggaran -->
@@ -120,68 +166,67 @@
                 </div>
               </div>
 
-              <!-- Collapsible Advanced: Nama / NIP -->
+              <!-- Collapsible Advanced: Tanggal TTD ST & Unit Kerja -->
               <div class="form-group">
                 <div class="accordion-header" id="accordion-toggle">
-                  <span>⚙️ Pengaturan Petugas (Nama / NIP)</span>
-                  <span>▼ Tampilkan</span>
+                  <span><i class="bi bi-gear"></i> Pengaturan Lanjutan (TTD ST &amp; Unit Kerja)</span>
+                  <span id="accordion-indicator"><i class="bi bi-chevron-down"></i> Tampilkan</span>
                 </div>
                 <div class="accordion-content" id="accordion-content">
                   <div class="form-group">
-                    <label class="form-label" for="input-nama">Nama Petugas</label>
-                    <input type="text" id="input-nama" class="form-input" value="NUR JANNAH">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="input-nip">NIP / NIK Petugas</label>
-                    <input type="text" id="input-nip" class="form-input" value="7301034811760004">
-                  </div>
-                  <div class="form-group">
                     <label class="form-label" for="input-tgl-st">Tanggal TTD Surat Tugas (Default: 15 Juni 2026)</label>
                     <input type="date" id="input-tgl-st" class="form-input" value="2026-06-15">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="input-unit-kerja">Unit Kerja (Surat Pernyataan)</label>
+                    <input type="text" id="input-unit-kerja" class="form-input" value="BPS Kabupaten Kepulauan Selayar">
                   </div>
                 </div>
               </div>
 
               <!-- Submit Button -->
               <button type="submit" id="btn-generate" class="btn btn-primary btn-block">
-                ⚡ Generate Dokumen
+                <i class="bi bi-lightning-charge"></i> Generate Dokumen
               </button>
             </form>
 
             <!-- Ringkasan Dokumen -->
             <div class="summary-box">
-              <div class="summary-title">🔍 Ringkasan Dokumen</div>
+              <div class="summary-title"><i class="bi bi-card-checklist"></i> Ringkasan Dokumen</div>
               <ul class="summary-list">
-                <li>No. ST: <strong id="sum-no-st">B-11/7301/VS.330/2026</strong></li>
-                <li>No. SPD: <strong id="sum-no-spd">11/7301/VS.330/2026</strong></li>
-                <li>Tgl. SPD: <strong id="sum-tgl-spd">20 Juli 2026</strong></li>
-                <li>Waktu: <strong id="sum-waktu">20 Juli 2026 s.d. 20 Juli 2026</strong></li>
-                <li>Kecamatan: <strong id="sum-kecamatan">Kecamatan Bontomatene</strong></li>
-                <li>Petugas: <strong id="sum-petugas">NUR JANNAH (7301034811760004)</strong></li>
+                <li><span>No. ST:</span> <strong id="sum-no-st">B-11/7301/VS.330/2026</strong></li>
+                <li><span>No. SPD:</span> <strong id="sum-no-spd">11/7301/VS.330/2026</strong></li>
+                <li><span>Tgl. SPD:</span> <strong id="sum-tgl-spd">20 Juli 2026</strong></li>
+                <li><span>Waktu:</span> <strong id="sum-waktu">20 Juli 2026 s.d. 20 Juli 2026</strong></li>
+                <li><span>Kecamatan:</span> <strong id="sum-kecamatan">Kecamatan Bontomatene</strong></li>
+                <li><span>Petugas:</span> <strong id="sum-petugas">-</strong></li>
+                <li><span>Jabatan:</span> <strong id="sum-jabatan">-</strong></li>
               </ul>
             </div>
           </div>
 
           <!-- Single Download Card -->
           <div class="card">
-            <h2 class="card-title">💾 Unduh Berkas</h2>
+            <h2 class="card-title">
+              <span><i class="bi bi-download"></i> Unduh Berkas</span>
+            </h2>
             
             <button id="btn-download-merged" class="btn btn-success btn-block" disabled>
-              📦 Unduh Bundel Lengkap (3 Hal PDF)
+              <i class="bi bi-collection"></i> Unduh Bundel Lengkap (3 Hal PDF)
             </button>
-            <div class="form-hint" style="text-align: center; margin-top: 0.3rem; margin-bottom: 0.65rem;">
+            <div class="form-hint" style="text-align: center; margin-top: 0.35rem; margin-bottom: 0.75rem;">
               Surat Tugas + SPD + Super digabung jadi 1 file PDF siap cetak.
             </div>
 
             <div class="download-grid">
               <button id="btn-download-st" class="btn btn-outline" disabled>
-                📄 Unduh Surat Tugas (.pdf)
+                <i class="bi bi-file-earmark-pdf"></i> Unduh Surat Tugas (.pdf)
               </button>
               <button id="btn-download-spd" class="btn btn-outline" disabled>
-                📄 Unduh SPD (.pdf)
+                <i class="bi bi-file-earmark-pdf"></i> Unduh SPD (.pdf)
               </button>
               <button id="btn-download-super" class="btn btn-outline" disabled>
-                📄 Unduh Surat Pernyataan (.pdf)
+                <i class="bi bi-file-earmark-pdf"></i> Unduh Surat Pernyataan (.pdf)
               </button>
             </div>
           </div>
@@ -191,15 +236,15 @@
         <div id="batch-mode-section" style="display: none;">
           <div class="card">
             <div class="card-title">
-              <span>📊 Batch Generator Excel</span>
+              <span><i class="bi bi-file-earmark-spreadsheet"></i> Batch Generator Excel</span>
               <button type="button" id="btn-download-template" class="btn btn-outline btn-sm">
-                📥 Unduh Template Excel
+                <i class="bi bi-file-earmark-arrow-down"></i> Unduh Template Excel
               </button>
             </div>
 
             <!-- Dropzone -->
             <div id="dropzone" class="dropzone">
-              <div class="dropzone-icon">📁</div>
+              <i class="bi bi-cloud-arrow-up dropzone-bi"></i>
               <div class="dropzone-text">Pilih atau Tarik File Excel ke Sini</div>
               <div class="dropzone-sub">Mendukung format .xlsx, .xls, .csv</div>
               <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display: none;">
@@ -217,7 +262,9 @@
             <div id="batch-preview-container" style="display: none; margin-top: 1rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <span style="font-size: 0.85rem; font-weight: 600;">Data Ditemukan: <span id="batch-count">0</span> Baris</span>
-                <button type="button" id="btn-clear-batch" class="btn btn-outline btn-sm" style="color: #dc2626;">Batal</button>
+                <button type="button" id="btn-clear-batch" class="btn btn-outline btn-sm" style="color: #dc2626;">
+                  <i class="bi bi-x-circle"></i> Batal
+                </button>
               </div>
 
               <div class="table-wrapper">
@@ -229,6 +276,7 @@
                       <th>Tanggal</th>
                       <th>Kecamatan</th>
                       <th>Petugas</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody id="batch-tbody"></tbody>
@@ -238,10 +286,10 @@
               <!-- Batch Action Buttons -->
               <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
                 <button type="button" id="btn-generate-batch-pdf" class="btn btn-success btn-block">
-                  📦 Unduh 1 Bundel PDF Gabungan (Semua Surat)
+                  <i class="bi bi-collection"></i> Unduh 1 Bundel PDF Gabungan (Semua Surat)
                 </button>
                 <button type="button" id="btn-generate-batch-zip" class="btn btn-primary btn-block">
-                  🗂️ Unduh Paket File Terpisah (.ZIP)
+                  <i class="bi bi-file-zip"></i> Unduh Paket File Terpisah (.ZIP)
                 </button>
               </div>
             </div>
@@ -262,14 +310,14 @@
             </div>
             <div class="preview-actions">
               <button id="btn-print" class="btn btn-outline btn-sm" disabled>
-                🖨️ Cetak
+                <i class="bi bi-printer"></i> Cetak
               </button>
             </div>
           </div>
 
           <!-- Empty State -->
           <div id="empty-state" class="empty-state">
-            <div class="empty-icon">📑</div>
+            <i class="bi bi-file-earmark-pdf empty-bi"></i>
             <h3>Memuat Pratinjau Dokumen...</h3>
             <p>Silakan tunggu sesaat atau klik tombol <strong>Generate Dokumen</strong>.</p>
           </div>
@@ -283,7 +331,10 @@
   </main>
 
   <!-- Toast -->
-  <div id="toast" class="toast">✓ Dokumen berhasil di-generate!</div>
+  <div id="toast" class="toast">
+    <i class="bi bi-check-circle-fill" style="color: #10b981;"></i>
+    <span id="toast-text">Dokumen berhasil di-generate!</span>
+  </div>
 
   <!-- Footer -->
   <footer class="app-footer">
@@ -295,6 +346,7 @@
   <script src="vendor/pdf-lib.min.js"></script>
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
+  <script src="pegawai.js"></script>
   <script src="templates.js"></script>
   <script src="app.js"></script>
 </body>
