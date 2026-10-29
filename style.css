@@ -218,6 +218,17 @@ body {
   gap: 0.75rem;
 }
 
+.grid-2 .form-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.grid-2 .form-group .form-label {
+  margin-top: auto;
+  margin-bottom: 0.35rem;
+}
+
 /* Petugas Segmented Selector */
 .petugas-segmented {
   display: flex;

@@ -331,7 +331,7 @@
     } else {
       return {
         isOrganik: false,
-        nama: el.inputNama.value || 'NUR JANNAH',
+        nama: el.inputNama.value || 'Nur Jannah',
         nip: el.inputNip.value || '7301034811760004',
         jabatan: el.inputJabatan.value || 'Petugas Lapangan Sensus (PPL Sensus)',
         unitKerja: el.inputUnitKerja.value || ''
@@ -381,8 +381,8 @@
     // 1. Nomor
     text = text.replace('B-114.21/7301/SS.330/2026', stNo);
 
-    // 2. Nama Petugas
-    text = text.replaceAll('NUR JANNAH', (opts.nama || 'NUR JANNAH').trim().toUpperCase());
+    // 2. Nama Petugas (sesuai database untuk organik, sesuai input user untuk mitra - tidak dicapslock)
+    text = text.replaceAll('NUR JANNAH', (opts.nama || 'Nur Jannah').trim());
 
     // 3. Jabatan Petugas
     text = text.replace(/Petugas Lapangan Sensus \\\([^\)]*\\\)/, escapePdfText(opts.jabatan || 'Petugas Lapangan Sensus (PPL Sensus)'));
@@ -443,8 +443,8 @@
     text = text.replace('pelaksanaan tanggal 20 Juli 2026', `pelaksanaan tanggal ${tglPelaksanaan}`);
     text = text.replace('Kepulauan Selayar, 20 Juli 2026', `Kepulauan Selayar, ${tglSpd}`);
 
-    // Nama & NIP (Both top and signature bottom)
-    text = text.replaceAll('NUR JANNAH', (opts.nama || 'NUR JANNAH').trim().toUpperCase());
+    // Nama & NIP (Both top and signature bottom - tidak dicapslock, sesuai input/database)
+    text = text.replaceAll('NUR JANNAH', (opts.nama || 'Nur Jannah').trim());
     text = text.replaceAll('7301034811760004', (opts.nip || '7301034811760004').trim());
 
     // Jabatan in Super
@@ -646,7 +646,7 @@
         'Tanggal SPD': '2026-07-24',
         'Kecamatan': 'Bontomatene',
         'Kategori': 'Non-Organik',
-        'Nama Petugas': 'NUR JANNAH',
+        'Nama Petugas': 'Nur Jannah',
         'NIP': '7301034811760004',
         'Jabatan': 'Mitra Sensus/Survei',
         'Tanggal Mulai': '2026-07-24',
@@ -734,7 +734,7 @@
             }
           }
 
-          if (!nama) nama = 'NUR JANNAH';
+          if (!nama) nama = 'Nur Jannah';
           if (!nip) nip = '7301034811760004';
           if (!jabatan) jabatan = isOrganik ? 'Statistisi Ahli Pertama' : 'Mitra Sensus/Survei';
 
