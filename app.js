@@ -140,22 +140,85 @@
   }
 
   /**
-   * Wrap text into two lines for Surat Tugas tujuan field
+   * Escape special characters in PDF literal text strings
    */
-  function splitTextTwoLines(text, maxLine1 = 52) {
+  function escapePdfText(str) {
+    return (str || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)');
+  }
+
+  /**
+   * Wrap text into multiple lines for Surat Tugas tujuan field
+   */
+  function wrapText(text, maxChars = 52) {
     text = (text || '').trim();
-    if (text.length <= maxLine1) return [text, ''];
-    const words = text.split(' ');
-    let line1 = '';
-    let line2 = '';
+    if (!text) return [''];
+    const words = text.split(/\s+/);
+    const lines = [];
+    let currentLine = '';
     for (const w of words) {
-      if ((line1 + (line1 ? ' ' : '') + w).length <= maxLine1 && !line2) {
-        line1 += (line1 ? ' ' : '') + w;
+      if ((currentLine ? currentLine + ' ' + w : w).length <= maxChars) {
+        currentLine = currentLine ? currentLine + ' ' + w : w;
       } else {
-        line2 += (line2 ? ' ' : '') + w;
+        if (currentLine) lines.push(currentLine);
+        currentLine = w;
       }
     }
-    return [line1, line2];
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  }
+
+  /**
+   * Build dynamic middle block for Surat Tugas (Tujuan, Waktu, Pembebanan)
+   * Automatically adapts Y-positions whether Tujuan is 1 line, 2 lines, 3 lines, or more!
+   */
+  function buildMiddleBlockST(opts) {
+    const kecFormatted = formatKecamatan(opts.kecamatan);
+    const defaultTujuan = `Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di ${kecFormatted}`;
+    const tujuanText = opts.tujuan || defaultTujuan;
+    const tujuanLines = wrapText(tujuanText, 52);
+
+    const tglMulai = formatIndoDate(opts.tglMulai || opts.tglSpd);
+    const tglSelesai = formatIndoDate(opts.tglSelesai || opts.tglMulai || opts.tglSpd);
+    const waktuStr = `${tglMulai} s.d. ${tglSelesai}`;
+
+    const bebanAkun = opts.pembebanan || 'GG 2902 BMA 006 530 B 524113 2';
+    const bebanUraian = opts.uraianBeban || 'Transport Daerah Sulit';
+
+    let y = 499.179;
+    const parts = [];
+
+    // 1. Tujuan / Tugas
+    parts.push(`BT 58.943 ${y.toFixed(3)} Td /F1 12.0 Tf  [(Tujuan/Tugas)] TJ ET`);
+    parts.push(`BT 211.943 ${y.toFixed(3)} Td /F1 12.0 Tf  [(:)] TJ ET`);
+
+    tujuanLines.forEach((line, idx) => {
+      const curY = idx === 0 ? y : y - (idx * 14.256);
+      parts.push(`BT 222.443 ${curY.toFixed(3)} Td /F1 12.0 Tf  [(${escapePdfText(line)})] TJ ET`);
+    });
+
+    const lastTujuanY = y - ((tujuanLines.length - 1) * 14.256);
+
+    // 2. Waktu Pelaksanaan
+    const waktuY = lastTujuanY - 17.256;
+    parts.push(`BT 58.943 ${waktuY.toFixed(3)} Td /F1 12.0 Tf  [(Waktu Pelaksanaan)] TJ ET`);
+    parts.push(`BT 211.943 ${waktuY.toFixed(3)} Td /F1 12.0 Tf  [(:)] TJ ET`);
+    parts.push(`BT 222.443 ${waktuY.toFixed(3)} Td /F1 12.0 Tf  [(${escapePdfText(waktuStr)})] TJ ET`);
+
+    // 3. Pembebanan
+    const beban1Y = waktuY - 17.256;
+    parts.push(`BT 58.943 ${beban1Y.toFixed(3)} Td /F1 12.0 Tf  [(Pembebanan)] TJ ET`);
+    parts.push(`BT 211.943 ${beban1Y.toFixed(3)} Td /F1 12.0 Tf  [(:)] TJ ET`);
+    parts.push(`BT 222.443 ${beban1Y.toFixed(3)} Td /F1 12.0 Tf  [(${escapePdfText(bebanAkun)})] TJ ET`);
+
+    if (bebanUraian) {
+      const beban2Y = beban1Y - 14.256;
+      parts.push(`BT 222.443 ${beban2Y.toFixed(3)} Td /F1 12.0 Tf  [(${escapePdfText(bebanUraian)})] TJ ET`);
+    }
+
+    return parts.join('\n');
   }
 
   /**
@@ -230,28 +293,14 @@
     let text = new TextDecoder('latin1').decode(window.pako.inflate(stream.getContents()));
 
     const { stNo } = formatNomor(opts.noSurat);
-    const kecFormatted = formatKecamatan(opts.kecamatan);
-    const tglMulai = formatIndoDate(opts.tglMulai || opts.tglSpd);
-    const tglSelesai = formatIndoDate(opts.tglSelesai || opts.tglMulai || opts.tglSpd);
-    const waktuStr = `${tglMulai} s.d. ${tglSelesai}`;
 
     // Nomor
     text = text.replace('B-114.21/7301/SS.330/2026', stNo);
 
-    // Tujuan / Tugas (wrapped into 2 lines)
-    const tujuanText = opts.tujuan || `Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di ${kecFormatted}`;
-    const [tujuanLine1, tujuanLine2] = splitTextTwoLines(tujuanText);
-    text = text.replace('Translok Petugas Pendataan SE2026 Menara Indah dan', tujuanLine1);
-    text = text.replace('Bontolebang di Kecamatan Bontomatene', tujuanLine2);
-
-    // Waktu
-    text = text.replace('20 Juli 2026 s.d. 20 Juli 2026', waktuStr);
-
-    // Pembebanan
-    const pembebanan = opts.pembebanan || 'GG 2902 BMA 006 530 B 524113 2';
-    const uraianBeban = opts.uraianBeban || 'Transport Daerah Sulit';
-    text = text.replace('GG 2902 BMA 006 530 B 524113 2', pembebanan);
-    text = text.replace('Transport Daerah Sulit', uraianBeban);
+    // Dynamic Middle Block: Tujuan, Waktu, Pembebanan (handles 1 line, 2 lines, 3 lines, etc.)
+    const middleRegex = /BT 58\.943 499\.179 Td \/F1 12\.0 Tf  \[\(Tujuan\/Tugas\)\] TJ ET[\s\S]*?BT 222\.443 433\.155 Td \/F1 12\.0 Tf  \[\(Transport Daerah Sulit\)\] TJ ET/;
+    const newMiddle = buildMiddleBlockST(opts);
+    text = text.replace(middleRegex, newMiddle);
 
     // Nama & Tanggal TTD
     if (opts.nama) {
