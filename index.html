@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generator SPD, Surat Tugas & Super - BPS Selayar</title>
+  <meta name="description" content="Aplikasi Web Otomasi Generator Surat Tugas, SPD, dan Surat Pernyataan BPS Kabupaten Kepulauan Selayar format Nur Jannah.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2222%22 font-size=%2222%22>📄</text></svg>">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <span class="brand-badge">BPS 7301</span>
+        <div>
+          <h1 class="brand-title">Generator SPD &amp; Surat Tugas</h1>
+          <p class="brand-subtitle">Otomasi Pembuatan ST, SPD &amp; Surat Pernyataan Format Resmi</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="badge-tag">SE2026 Format • Nur Jannah</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Dashboard -->
+  <main class="main-container">
+    <div class="dashboard-grid">
+      
+      <!-- Left Panel: Form Input -->
+      <section class="left-panel">
+        <div class="card">
+          <h2 class="card-title">📝 Parameter Dokumen</h2>
+          <form id="generator-form">
+
+            <!-- 1. Tanggal SPD -->
+            <div class="form-group">
+              <label class="form-label" for="input-tgl-spd">Tanggal SPD &amp; Surat Pernyataan *</label>
+              <input type="date" id="input-tgl-spd" class="form-input" value="2026-07-20" required>
+              <div class="form-hint">Terbaca: <strong id="tgl-spd-preview">20 Juli 2026</strong></div>
+            </div>
+
+            <!-- 2. Nomor Surat -->
+            <div class="form-group">
+              <label class="form-label" for="input-no-surat">Nomor Surat / Kode ST *</label>
+              <input type="text" id="input-no-surat" class="form-input" value="114.21" placeholder="Contoh: 114.21 atau B-114.21/7301/SS.330/2026" required>
+              <div class="form-hint">Cukup ketik kode nomor (misal <code>114.21</code>). Format resmi BPS terisi otomatis.</div>
+            </div>
+
+            <!-- 3. Kecamatan -->
+            <div class="form-group">
+              <label class="form-label" for="input-kecamatan">Kecamatan Tujuan *</label>
+              <input type="text" id="input-kecamatan" class="form-input" list="kecamatan-list" value="Bontomatene" placeholder="Pilih atau ketik kecamatan..." required>
+              <datalist id="kecamatan-list">
+                <option value="Benteng">
+                <option value="Bontoharu">
+                <option value="Bontomanai">
+                <option value="Bontomatene">
+                <option value="Bontosikuyu">
+                <option value="Buki">
+                <option value="Pasimasunggu">
+                <option value="Pasimasunggu Timur">
+                <option value="Pasimarannu">
+                <option value="Pasilambena">
+                <option value="Takabonerate">
+              </datalist>
+              <div class="form-hint">Bisa langsung pilih dari daftar atau ketik nama kecamatan.</div>
+            </div>
+
+            <!-- 4. Tanggal Perjalanan Dinas -->
+            <label class="toggle-wrapper" for="sync-dates-checkbox">
+              <input type="checkbox" id="sync-dates-checkbox" checked>
+              <span class="toggle-label">Tanggal mulai &amp; selesai sama dengan Tanggal SPD (1 Hari)</span>
+            </label>
+
+            <div id="tgl-perjalanan-container" class="grid-2" style="display: none; margin-bottom: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="input-tgl-mulai">Tanggal Mulai Dinas</label>
+                <input type="date" id="input-tgl-mulai" class="form-input" value="2026-07-20">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="input-tgl-selesai">Tanggal Selesai Dinas</label>
+                <input type="date" id="input-tgl-selesai" class="form-input" value="2026-07-20">
+              </div>
+            </div>
+
+            <!-- 5. Opsi Tambahan / Petugas (Collapsible) -->
+            <div class="form-group">
+              <div class="accordion-header" id="accordion-toggle">
+                <span>⚙️ Pengaturan Tambahan (Nama / NIP)</span>
+                <span>▼ Tampilkan</span>
+              </div>
+              <div class="accordion-content" id="accordion-content">
+                <div class="form-group">
+                  <label class="form-label" for="input-nama">Nama Petugas</label>
+                  <input type="text" id="input-nama" class="form-input" value="NUR JANNAH">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-nip">NIP / NIK Petugas</label>
+                  <input type="text" id="input-nip" class="form-input" value="7301034811760004">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-tgl-st">Tanggal TTD Surat Tugas (Default: 15 Juni 2026)</label>
+                  <input type="date" id="input-tgl-st" class="form-input" value="2026-06-15">
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="btn-generate" class="btn btn-primary btn-block">
+              ⚡ Generate Dokumen
+            </button>
+          </form>
+
+          <!-- Live Preview Summary Box -->
+          <div class="summary-box">
+            <div class="summary-title">🔍 Ringkasan Dokumen</div>
+            <ul class="summary-list">
+              <li>No. ST: <strong id="sum-no-st">B-114.21/7301/SS.330/2026</strong></li>
+              <li>No. SPD: <strong id="sum-no-spd">114.21/7301/SS.330/2026</strong></li>
+              <li>Tgl. SPD: <strong id="sum-tgl-spd">20 Juli 2026</strong></li>
+              <li>Waktu Dinas: <strong id="sum-waktu">20 Juli 2026 s.d. 20 Juli 2026</strong></li>
+              <li>Wilayah: <strong id="sum-kecamatan">Kecamatan Bontomatene</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Download & Print Actions Card -->
+        <div class="card">
+          <h2 class="card-title">💾 Unduh Berkas</h2>
+          
+          <button id="btn-download-merged" class="btn btn-success btn-block" disabled>
+            📦 Unduh Bundel Lengkap (3 Hal PDF)
+          </button>
+          <div class="form-hint" style="text-align: center; margin-top: 0.35rem; margin-bottom: 0.75rem;">
+            Surat Tugas + SPD + Super digabung jadi 1 file siap cetak.
+          </div>
+
+          <div class="download-grid">
+            <button id="btn-download-st" class="btn btn-outline" disabled>
+              📄 Unduh Surat Tugas (.pdf)
+            </button>
+            <button id="btn-download-spd" class="btn btn-outline" disabled>
+              📄 Unduh SPD (.pdf)
+            </button>
+            <button id="btn-download-super" class="btn btn-outline" disabled>
+              📄 Unduh Surat Pernyataan (.pdf)
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Live PDF Viewer -->
+      <section class="right-panel">
+        <div class="card preview-container">
+          <div class="preview-toolbar">
+            <div class="tabs-group">
+              <button id="tab-merged" class="tab-btn active">Bundel 3 Halaman</button>
+              <button id="tab-st" class="tab-btn">Surat Tugas</button>
+              <button id="tab-spd" class="tab-btn">SPD</button>
+              <button id="tab-super" class="tab-btn">Surat Pernyataan</button>
+            </div>
+            <div class="preview-actions">
+              <button id="btn-print" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.825rem;" disabled>
+                🖨️ Cetak
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State (before first load) -->
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">📑</div>
+            <h3>Memuat Pratinjau Dokumen...</h3>
+            <p>Silakan tunggu sesaat atau klik tombol <strong>Generate Dokumen</strong> di sebelah kiri.</p>
+          </div>
+
+          <!-- Active PDF Embed/Iframe -->
+          <iframe id="pdf-viewer" class="pdf-viewer-frame" style="display: none;" title="Pratinjau PDF"></iframe>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">✓ Dokumen berhasil di-generate!</div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Generator Surat Tugas, SPD &amp; Surat Pernyataan BPS Kabupaten Kepulauan Selayar • 2026</p>
+  </footer>
+
+  <!-- Scripts: Vendor and Core App -->
+  <script src="vendor/pako.min.js"></script>
+  <script src="vendor/pdf-lib.min.js"></script>
+  <script src="templates.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
