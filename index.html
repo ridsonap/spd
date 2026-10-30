@@ -225,32 +225,6 @@
               </ul>
             </div>
           </div>
-
-          <!-- Single Download Card -->
-          <div class="card">
-            <h2 class="card-title">
-              <span><i class="bi bi-download"></i> Unduh Berkas</span>
-            </h2>
-            
-            <button id="btn-download-merged" class="btn btn-success btn-block" disabled>
-              <i class="bi bi-collection"></i> Unduh Bundel Lengkap (3 Hal PDF)
-            </button>
-            <div class="form-hint" style="text-align: center; margin-top: 0.35rem; margin-bottom: 0.75rem;">
-              Surat Tugas + SPD + Super digabung jadi 1 file PDF siap cetak.
-            </div>
-
-            <div class="download-grid">
-              <button id="btn-download-st" class="btn btn-outline" disabled>
-                <i class="bi bi-file-earmark-pdf"></i> Unduh Surat Tugas (.pdf)
-              </button>
-              <button id="btn-download-spd" class="btn btn-outline" disabled>
-                <i class="bi bi-file-earmark-pdf"></i> Unduh SPD (.pdf)
-              </button>
-              <button id="btn-download-super" class="btn btn-outline" disabled>
-                <i class="bi bi-file-earmark-pdf"></i> Unduh Surat Pernyataan (.pdf)
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- 2. Batch Mode Section (Excel Upload) -->
@@ -324,13 +298,16 @@
         <div class="card preview-container">
           <div class="preview-toolbar">
             <div class="tabs-group">
-              <button id="tab-merged" class="tab-btn active">Bundel 3 Halaman</button>
+              <button id="tab-merged" class="tab-btn active">Bundel (3 Hal)</button>
               <button id="tab-st" class="tab-btn">Surat Tugas</button>
               <button id="tab-spd" class="tab-btn">SPD</button>
               <button id="tab-super" class="tab-btn">Surat Pernyataan</button>
             </div>
             <div class="preview-actions">
-              <button id="btn-print" class="btn btn-outline btn-sm" disabled>
+              <button id="btn-download-tab" class="btn btn-success btn-sm" disabled title="Unduh Bundel (3 Hal)">
+                <i class="bi bi-download"></i> Unduh
+              </button>
+              <button id="btn-print" class="btn btn-outline btn-sm" disabled title="Cetak Dokumen">
                 <i class="bi bi-printer"></i> Cetak
               </button>
             </div>
@@ -367,8 +344,8 @@
   <script src="vendor/pdf-lib.min.js"></script>
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="pegawai.js?v=20261030c"></script>
-  <script src="templates.js?v=20261030c"></script>
-  <script src="app.js?v=20261030c"></script>
+  <script src="pegawai.js?v=20261030d"></script>
+  <script src="templates.js?v=20261030d"></script>
+  <script src="app.js?v=20261030d"></script>
 </body>
 </html>

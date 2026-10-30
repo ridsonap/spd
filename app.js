@@ -58,10 +58,7 @@
 
     // Single Actions
     btnGenerate: document.getElementById('btn-generate'),
-    btnDownloadMerged: document.getElementById('btn-download-merged'),
-    btnDownloadSt: document.getElementById('btn-download-st'),
-    btnDownloadSpd: document.getElementById('btn-download-spd'),
-    btnDownloadSuper: document.getElementById('btn-download-super'),
+    btnDownloadTab: document.getElementById('btn-download-tab'),
 
     // Batch Excel Elements
     btnDownloadTemplate: document.getElementById('btn-download-template'),
@@ -705,10 +702,7 @@
       state.superBlobUrl = URL.createObjectURL(new Blob([superBytesOut], { type: 'application/pdf' }));
       state.mergedBlobUrl = URL.createObjectURL(new Blob([mergedBytesOut], { type: 'application/pdf' }));
 
-      el.btnDownloadMerged.disabled = false;
-      el.btnDownloadSt.disabled = false;
-      el.btnDownloadSpd.disabled = false;
-      el.btnDownloadSuper.disabled = false;
+      if (el.btnDownloadTab) el.btnDownloadTab.disabled = false;
       el.btnPrint.disabled = false;
 
       updateViewerTab(state.activeTab);
@@ -742,6 +736,16 @@
     } else if (tab === 'super') {
       el.tabSuper.classList.add('active');
       targetUrl = state.superBlobUrl;
+    }
+
+    if (el.btnDownloadTab) {
+      const titles = {
+        merged: 'Unduh Bundel (3 Hal)',
+        st: 'Unduh Surat Tugas',
+        spd: 'Unduh SPD',
+        super: 'Unduh Surat Pernyataan'
+      };
+      el.btnDownloadTab.title = titles[tab] || 'Unduh';
     }
 
     if (targetUrl) {
@@ -1283,30 +1287,22 @@
       generateSingle();
     });
 
-    // Download buttons
-    el.btnDownloadMerged.addEventListener('click', () => {
-      const tglStr = formatIndoDate(el.tglSpd.value) || '20 Juli 2026';
-      const no = (el.noSurat.value || 'B-11').replace(/[^a-zA-Z0-9.-]/g, '_');
-      triggerDownload(state.mergedBlobUrl, `Bundel SPD Lengkap - ${no} - ${tglStr}.pdf`);
-    });
-
-    el.btnDownloadSt.addEventListener('click', () => {
-      const tglStr = formatIndoDate(el.tglSpd.value) || '20 Juli 2026';
-      const no = (el.noSurat.value || 'B-11').replace(/[^a-zA-Z0-9.-]/g, '_');
-      triggerDownload(state.stBlobUrl, `Surat Tugas - ${no} - ${tglStr}.pdf`);
-    });
-
-    el.btnDownloadSpd.addEventListener('click', () => {
-      const tglStr = formatIndoDate(el.tglSpd.value) || '20 Juli 2026';
-      const no = (el.noSurat.value || 'B-11').replace(/[^a-zA-Z0-9.-]/g, '_');
-      triggerDownload(state.spdBlobUrl, `SPD - ${no} - ${tglStr}.pdf`);
-    });
-
-    el.btnDownloadSuper.addEventListener('click', () => {
-      const tglStr = formatIndoDate(el.tglSpd.value) || '20 Juli 2026';
-      const no = (el.noSurat.value || 'B-11').replace(/[^a-zA-Z0-9.-]/g, '_');
-      triggerDownload(state.superBlobUrl, `Super - ${no} - ${tglStr}.pdf`);
-    });
+    // Download active tab button
+    if (el.btnDownloadTab) {
+      el.btnDownloadTab.addEventListener('click', () => {
+        const tglStr = formatIndoDate(el.tglSpd.value) || '20 Juli 2026';
+        const no = (el.noSurat.value || 'B-11').replace(/[^a-zA-Z0-9.-]/g, '_');
+        if (state.activeTab === 'st') {
+          triggerDownload(state.stBlobUrl, `Surat Tugas - ${no} - ${tglStr}.pdf`);
+        } else if (state.activeTab === 'spd') {
+          triggerDownload(state.spdBlobUrl, `SPD - ${no} - ${tglStr}.pdf`);
+        } else if (state.activeTab === 'super') {
+          triggerDownload(state.superBlobUrl, `Super - ${no} - ${tglStr}.pdf`);
+        } else {
+          triggerDownload(state.mergedBlobUrl, `Bundel SPD Lengkap - ${no} - ${tglStr}.pdf`);
+        }
+      });
+    }
 
     // Preview tabs
     el.tabMerged.addEventListener('click', () => updateViewerTab('merged'));
