@@ -1,7 +1,7 @@
 /**
  * Generator Surat Tugas, SPD, dan Surat Pernyataan BPS Kabupaten Kepulauan Selayar
- * UI layer: form, ringkasan, batch Excel, preview. Pure logic lives in core.js and the
- * PDF rendering in render.js.
+ * UI layer: stepper form, ringkasan, batch Excel, preview. Pure logic lives in core.js
+ * and the PDF rendering in render.js.
  */
 
 (function () {
@@ -19,7 +19,12 @@
     singleModeSection: $('single-mode-section'),
     batchModeSection: $('batch-mode-section'),
 
-    // Single Form
+    // Stepper
+    stepLinks: Array.from(document.querySelectorAll('.step-link')),
+    steps: Array.from(document.querySelectorAll('.step')),
+    btnReset: $('btn-reset'),
+
+    // Langkah 1: Petugas
     form: $('generator-form'),
     radioOrganik: $('radio-organik'),
     radioNonorganik: $('radio-nonorganik'),
@@ -34,7 +39,9 @@
     inputNip: $('input-nip'),
     inputJabatan: $('input-jabatan'),
 
+    // Langkah 2: Perjalanan
     noSurat: $('input-no-surat'),
+    inputTglSt: $('input-tgl-st'),
     tglSpd: $('input-tgl-spd'),
     tglSpdPreview: $('tgl-spd-preview'),
     selectKecamatanAsal: $('select-kecamatan-asal'),
@@ -44,10 +51,10 @@
     tglMulai: $('input-tgl-mulai'),
     tglSelesai: $('input-tgl-selesai'),
     inputTujuan: $('input-tujuan'),
+
+    // Langkah 3: Anggaran & Format
     inputPembebanan: $('input-pembebanan'),
     inputUraianBeban: $('input-uraian-beban'),
-    inputTglSt: $('input-tgl-st'),
-    inputUnitKerja: $('input-unit-kerja'),
     radioFormat1: $('radio-format-1'),
     radioFormat2: $('radio-format-2'),
     f2Fields: $('f2-fields'),
@@ -65,6 +72,7 @@
     inputMataAnggaran: $('input-mata-anggaran'),
     inputKeterangan: $('input-keterangan'),
     btnIsiAnggaran: $('btn-isi-anggaran'),
+    inputUnitKerja: $('input-unit-kerja'),
     selectPpk: $('select-ppk'),
     inputPpkNama: $('input-ppk-nama'),
     inputPpkNip: $('input-ppk-nip'),
@@ -72,9 +80,10 @@
     accordionToggle: $('accordion-toggle'),
     accordionContent: $('accordion-content'),
     accordionIndicator: $('accordion-indicator'),
-    formErrors: $('form-errors'),
 
-    // Single Summary
+    // Langkah 4: Periksa & Unduh
+    reviewLine: $('review-line'),
+    formErrors: $('form-errors'),
     sumNoSt: $('sum-no-st'),
     sumNoSpd: $('sum-no-spd'),
     sumTglSpd: $('sum-tgl-spd'),
@@ -85,16 +94,14 @@
     sumTujuan: $('sum-tujuan'),
     sumLama: $('sum-lama'),
     sumFormat: $('sum-format'),
-    formCard: $('form-card'),
-    summaryCard: $('summary-card'),
-    summaryToggle: $('summary-toggle'),
-    summaryBody: $('summary-body'),
-    summaryToggleText: $('summary-toggle-text'),
-    previewContainer: $('preview-container'),
-
-    // Single Actions
     btnGenerate: $('btn-generate'),
-    btnDownloadTab: $('btn-download-tab'),
+    resultActions: $('result-actions'),
+    btnDownloadBundle: $('btn-download-bundle'),
+    btnDownloadBundleText: $('btn-download-bundle-text'),
+    btnDownloadSpd: $('btn-download-spd'),
+    downloadButtons: Array.from(document.querySelectorAll('[data-download]')),
+    btnPrint: $('btn-print'),
+    step4PreviewSlot: $('step4-preview-slot'),
 
     // Batch Excel Elements
     btnDownloadTemplate: $('btn-download-template'),
@@ -107,18 +114,26 @@
     btnClearBatch: $('btn-clear-batch'),
     btnGenerateBatchPdf: $('btn-generate-batch-pdf'),
     btnGenerateBatchZip: $('btn-generate-batch-zip'),
+    btnBatchPdfText: $('btn-batch-pdf-text'),
+    btnBatchZipText: $('btn-batch-zip-text'),
+    btnBatchReport: $('btn-batch-report'),
     batchProgress: $('batch-progress'),
+    progressBar: $('progress-bar'),
     progressBarFill: $('progress-bar-fill'),
     progressText: $('progress-text'),
 
-    // Preview Toolbar
+    // Preview
+    rightPanel: $('right-panel'),
+    previewContainer: $('preview-container'),
     tabMerged: $('tab-merged'),
     tabSt: $('tab-st'),
     tabSpd: $('tab-spd'),
     tabSuper: $('tab-super'),
-    btnPrint: $('btn-print'),
+    btnOpenTab: $('btn-open-tab'),
     pdfViewer: $('pdf-viewer'),
     emptyState: $('empty-state'),
+    previewFallback: $('preview-fallback'),
+    btnOpenFallback: $('btn-open-fallback'),
     toast: $('toast'),
     toastText: $('toast-text'),
   };
@@ -157,6 +172,9 @@
     ppkProgram: () => el.inputPpkProgram
   };
 
+  const STEP_COUNT = 4;
+  const stepperQuery = window.matchMedia('(max-width: 767.98px)');
+
   /**
    * localStorage wrapper: storage can be unavailable (private mode, blocked site data).
    */
@@ -178,6 +196,14 @@
     }
   };
 
+  // Field values remembered between visits (habits, not personal data).
+  const REMEMBERED = {
+    kecamatanAsal: () => el.selectKecamatanAsal,
+    pembebanan: () => el.inputPembebanan,
+    uraianBeban: () => el.inputUraianBeban,
+    tempatBerangkat: () => el.inputTempatBerangkat
+  };
+
   // State
   const state = {
     urls: { st: null, spd: null, super: null, merged: null },
@@ -187,7 +213,9 @@
     pegawaiSource: 'lokal',
     format: 1,
     pageCount: 3,
-    showErrors: false,
+    step: 1,
+    visited: new Set([1]),
+    revealed: new Set(), // steps whose errors are shown inline
     busy: false
   };
 
@@ -196,8 +224,7 @@
    */
   let toastTimer = null;
   function showToast(msg, isError) {
-    if (el.toastText) el.toastText.textContent = msg;
-    else el.toast.textContent = msg;
+    el.toastText.textContent = msg;
     el.toast.classList.toggle('toast-error', !!isError);
     el.toast.style.display = 'inline-flex';
     clearTimeout(toastTimer);
@@ -236,6 +263,10 @@
     return { st, spd, super: sup };
   }
 
+  // ---------------------------------------------------------------------------
+  // Pegawai & PPK
+  // ---------------------------------------------------------------------------
+
   /**
    * Populate Pegawai Organik dropdown (first option is an empty prompt)
    */
@@ -259,20 +290,17 @@
 
     populatePpkDropdown(list);
 
-    if (el.pegawaiSource) {
-      el.pegawaiSource.textContent = state.pegawaiSource === 'lokal'
-        ? `Data pegawai: lokal (${list.length} orang)`
-        : `Data pegawai: tersinkron ${state.pegawaiSource} (${list.length} orang)`;
-    }
+    el.pegawaiSource.textContent = state.pegawaiSource === 'lokal'
+      ? `Data pegawai: lokal (${list.length} orang)`
+      : `Data pegawai: tersinkron ${state.pegawaiSource} (${list.length} orang)`;
     updateOrganikBadge();
   }
 
   function populatePpkDropdown(list) {
-    if (!el.selectPpk) return;
     el.selectPpk.innerHTML = '';
     const empty = document.createElement('option');
     empty.value = '';
-    empty.textContent = '\u2014 Pilih untuk mengisi otomatis \u2014';
+    empty.textContent = '— Pilih untuk mengisi otomatis —';
     el.selectPpk.appendChild(empty);
     list.forEach((p, idx) => {
       const opt = document.createElement('option');
@@ -372,28 +400,46 @@
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Validation display
+  // ---------------------------------------------------------------------------
+
+  function inputFor(field) {
+    const getter = FIELD_INPUTS[field];
+    return getter ? getter() : null;
+  }
+
+  function stepOf(input) {
+    const section = input && input.closest('.step');
+    return section ? parseInt(section.dataset.step, 10) : STEP_COUNT;
+  }
+
+  function errorsByStep(errors) {
+    const byStep = {};
+    for (const err of errors) {
+      const s = stepOf(inputFor(err.field));
+      (byStep[s] = byStep[s] || []).push(err);
+    }
+    return byStep;
+  }
+
   /**
-   * Show validator errors next to the fields (and a short list above the button)
+   * Show validator errors next to the fields of revealed steps, and the full list
+   * (with links) in step 4 once the user reached it.
    */
   function renderErrors(errors) {
     document.querySelectorAll('.field-error').forEach(n => n.remove());
     document.querySelectorAll('[aria-invalid="true"]').forEach(n => {
       n.removeAttribute('aria-invalid');
-      const ids = (n.getAttribute('aria-describedby') || '').split(' ').filter(id => !id.startsWith('err-'));
+      const ids = (n.getAttribute('aria-describedby') || '').split(' ').filter(id => id && !id.startsWith('err-'));
       if (ids.length) n.setAttribute('aria-describedby', ids.join(' '));
       else n.removeAttribute('aria-describedby');
     });
-    if (el.formErrors) {
-      el.formErrors.innerHTML = '';
-      el.formErrors.hidden = true;
-    }
-    if (!state.showErrors) return;
 
     const seen = new Set();
     for (const err of errors) {
-      const getter = FIELD_INPUTS[err.field];
-      const input = getter && getter();
-      if (!input || seen.has(input)) continue;
+      const input = inputFor(err.field);
+      if (!input || seen.has(input) || !state.revealed.has(stepOf(input))) continue;
       seen.add(input);
       const id = `err-${input.id}`;
       const msg = document.createElement('div');
@@ -407,67 +453,152 @@
       input.setAttribute('aria-describedby', ids.concat(id).join(' '));
     }
 
-    if (el.formErrors && errors.length) {
-      const p = document.createElement('p');
-      p.textContent = `Ada ${errors.length} isian yang perlu diperbaiki:`;
-      const ul = document.createElement('ul');
-      for (const err of errors) {
-        const li = document.createElement('li');
-        const getter = FIELD_INPUTS[err.field];
-        const input = getter && getter();
-        if (input) {
-          const a = document.createElement('a');
-          a.href = `#${input.id}`;
-          a.textContent = err.message;
-          a.addEventListener('click', (e) => {
-            e.preventDefault();
-            focusField(input);
-          });
-          li.appendChild(a);
-        } else {
-          li.textContent = err.message;
-        }
-        ul.appendChild(li);
+    el.formErrors.innerHTML = '';
+    el.formErrors.hidden = !(state.revealed.has(STEP_COUNT) && errors.length);
+    if (el.formErrors.hidden) return;
+
+    const p = document.createElement('p');
+    p.textContent = `Ada ${errors.length} isian yang perlu diperbaiki sebelum dokumen bisa dibuat:`;
+    const ul = document.createElement('ul');
+    for (const err of errors) {
+      const li = document.createElement('li');
+      const input = inputFor(err.field);
+      if (input) {
+        const a = document.createElement('a');
+        a.href = `#${input.id}`;
+        a.textContent = `Langkah ${stepOf(input)}: ${err.message}`;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          focusField(input);
+        });
+        li.appendChild(a);
+      } else {
+        li.textContent = err.message;
       }
-      el.formErrors.append(p, ul);
-      el.formErrors.hidden = false;
+      ul.appendChild(li);
     }
+    el.formErrors.append(p, ul);
   }
 
   function focusField(input) {
+    goToStep(stepOf(input), { scroll: false });
     if (el.accordionContent.contains(input) && !el.accordionContent.classList.contains('open')) {
-      el.accordionToggle.click();
+      toggleAccordion();
     }
-    input.focus();
+    input.focus({ preventScroll: true });
     input.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
+  // ---------------------------------------------------------------------------
+  // Stepper
+  // ---------------------------------------------------------------------------
+
+  function isStepper() {
+    return stepperQuery.matches;
+  }
+
   /**
-   * Update live summary and inline validation
+   * Show one step (phone) or scroll to it (desktop) and refresh the progress marks.
+   */
+  function goToStep(n, opts) {
+    const options = Object.assign({ scroll: true }, opts);
+    state.step = Math.min(Math.max(n, 1), STEP_COUNT);
+    state.visited.add(state.step);
+    if (state.step === STEP_COUNT) {
+      for (let i = 1; i <= STEP_COUNT; i++) state.revealed.add(i);
+    }
+    el.steps.forEach((s) => {
+      s.classList.toggle('is-current', parseInt(s.dataset.step, 10) === state.step);
+    });
+    updateSummary();
+    if (options.scroll) {
+      const section = $(`step-${state.step}`);
+      if (isStepper()) window.scrollTo({ top: 0, behavior: 'smooth' });
+      else section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const title = $(`step-${state.step}-title`);
+      title.setAttribute('tabindex', '-1');
+      title.focus({ preventScroll: true });
+    }
+  }
+
+  function updateStepper(errors) {
+    const byStep = errorsByStep(errors);
+    el.stepLinks.forEach((btn) => {
+      const n = parseInt(btn.dataset.goto, 10);
+      const done = n < STEP_COUNT && state.visited.has(n) && n !== state.step && !byStep[n];
+      const warn = state.revealed.has(n) && !!byStep[n] && n < STEP_COUNT;
+      btn.classList.toggle('is-current', n === state.step);
+      btn.classList.toggle('is-done', done);
+      btn.classList.toggle('has-error', warn);
+      if (n === state.step) btn.setAttribute('aria-current', 'step');
+      else btn.removeAttribute('aria-current');
+      const status = n === state.step ? ' (sedang diisi)' : warn ? ' (perlu diperbaiki)' : done ? ' (selesai)' : '';
+      btn.setAttribute('aria-label', `Langkah ${n}: ${btn.querySelector('.step-name').textContent}${status}`);
+    });
+  }
+
+  /**
+   * "Lanjut": reveal the current step's errors and only move on when it is complete.
+   */
+  function nextStep() {
+    state.revealed.add(state.step);
+    const { errors } = updateSummary();
+    const own = errorsByStep(errors)[state.step];
+    if (own) {
+      focusField(inputFor(own[0].field));
+      showToast(`Lengkapi dulu ${own.length} isian di langkah ini.`, true);
+      return;
+    }
+    goToStep(state.step + 1);
+  }
+
+  /**
+   * Phones get one step at a time and the preview inside step 4; larger screens show
+   * every step with the preview in the right column.
+   */
+  function applyLayout() {
+    const stepper = isStepper();
+    document.body.classList.toggle('is-stepper', stepper);
+    const slot = stepper ? el.step4PreviewSlot : el.rightPanel;
+    if (el.previewContainer.parentElement !== slot) slot.appendChild(el.previewContainer);
+    updateViewerTab(state.activeTab);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Summary
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Update live summary, inline validation and progress marks
    */
   function updateSummary() {
     const { data, errors } = Core.buildSpdData(collectInput());
     const dash = (v) => v || '-';
 
     el.tglSpdPreview.textContent = dash(data.tglSpdIndo);
+    el.reviewLine.textContent = Core.ringkasanSatuBaris(data);
     el.sumNoSt.textContent = dash(data.stNo);
     el.sumNoSpd.textContent = dash(data.spdNo);
     el.sumTglSpd.textContent = dash(data.tglSpdIndo);
     el.sumWaktu.textContent = data.tglMulaiIndo ? data.waktuStr : '-';
-    el.sumKecamatan.textContent = `${dash(data.kecAsal)} → ${dash(data.kecTujuan)}`;
+    el.sumKecamatan.textContent = `${dash(data.tempatBerangkat)} → ${dash(data.kecTujuan)}`;
     el.sumPetugas.textContent = data.petugas.nama
       ? `${data.petugas.nama} (${data.petugas.nip || '-'}) [${data.petugas.isOrganik ? 'Organik' : 'Mitra'}]`
       : '-';
     el.sumJabatan.textContent = dash(data.petugas.jabatan);
-    if (el.sumTujuan) el.sumTujuan.textContent = dash(data.tujuan);
-    if (el.sumLama) el.sumLama.textContent = data.lamaHari ? `${data.lamaHari} hari` : '-';
-    if (el.sumFormat) {
-      el.sumFormat.textContent = data.format === 2 ? 'Format 2 (halaman depan + lampiran, 4 hal)' : 'Format 1 (lampiran saja, 3 hal)';
-    }
-    el.sumKecamatan.textContent = `${dash(data.tempatBerangkat)} \u2192 ${dash(data.kecTujuan)}`;
+    el.sumTujuan.textContent = dash(data.tujuan);
+    el.sumLama.textContent = data.lamaHari ? `${data.lamaHari} hari` : '-';
+    el.sumFormat.textContent = data.format === 2
+      ? 'Format 2 (halaman depan + lampiran, 4 halaman)'
+      : 'Format 1 (lampiran saja, 3 halaman)';
     renderErrors(errors);
+    updateStepper(errors);
     return { data, errors };
   }
+
+  // ---------------------------------------------------------------------------
+  // Generate & preview
+  // ---------------------------------------------------------------------------
 
   function revokeUrls() {
     Object.keys(state.urls).forEach((k) => {
@@ -481,7 +612,6 @@
   }
 
   function setBusy(btn, busy, busyHtml) {
-    if (!btn) return;
     if (busy) {
       btn.dataset.html = btn.innerHTML;
       btn.innerHTML = busyHtml;
@@ -493,21 +623,32 @@
   }
 
   /**
+   * Any change after generating makes the result stale.
+   */
+  function markStale() {
+    if (!state.urls.merged) return;
+    revokeUrls();
+    el.resultActions.hidden = true;
+    el.btnGenerate.hidden = false;
+    el.pdfViewer.removeAttribute('src');
+    updateViewerTab(state.activeTab);
+  }
+
+  /**
    * Generate Single Set of Documents
    */
   async function generateSingle() {
     if (state.busy) return;
-    state.showErrors = true;
+    if (state.step !== STEP_COUNT) goToStep(STEP_COUNT, { scroll: false });
     const { data, errors } = updateSummary();
     if (errors.length) {
-      const getter = FIELD_INPUTS[errors[0].field];
-      if (getter && getter()) focusField(getter());
-      showToast('Periksa isian yang ditandai merah.', true);
+      el.formErrors.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      showToast('Masih ada isian yang perlu diperbaiki.', true);
       return;
     }
 
     state.busy = true;
-    setBusy(el.btnGenerate, true, '<i class="bi bi-hourglass-split"></i> Memproses PDF...');
+    setBusy(el.btnGenerate, true, '<i class="bi bi-hourglass-split" aria-hidden="true"></i> Membuat PDF...');
     try {
       const bundle = await Render.buildBundle(data, await loadTemplates());
       const [st, spd, sup, merged] = await Promise.all([
@@ -517,12 +658,19 @@
       revokeUrls();
       state.urls = { st: pdfUrl(st), spd: pdfUrl(spd), super: pdfUrl(sup), merged: pdfUrl(merged) };
       state.pageCount = bundle.pageCount;
+      state.fileStem = `${fileSafe(data.stNo)} - ${data.tglSpdIndo}`;
 
-      if (el.btnDownloadTab) el.btnDownloadTab.disabled = false;
-      el.btnPrint.disabled = false;
+      el.btnDownloadBundleText.textContent = `Unduh Bundel (${bundle.pageCount} halaman)`;
+      el.btnDownloadSpd.textContent = bundle.pageCount === 4 ? 'SPD (2 halaman)' : 'SPD';
+      el.resultActions.hidden = false;
+      // The result is now the main action; editing anything brings "Buat Dokumen" back.
+      el.btnGenerate.hidden = true;
 
-      updateViewerTab(state.activeTab);
-      showToast('Berkas berhasil dibuat!');
+      updateViewerTab('merged');
+      showToast('Dokumen berhasil dibuat. Periksa pratinjau, lalu unduh.');
+      if (bundle.warnings.length) {
+        showToast(`Karakter ${bundle.warnings.join(' ')} diganti "?" karena tidak bisa dicetak.`, true);
+      }
     } catch (err) {
       console.error(err);
       showToast(`Gagal membuat dokumen: ${err.message}`, true);
@@ -530,6 +678,15 @@
       state.busy = false;
       setBusy(el.btnGenerate, false);
     }
+  }
+
+  /**
+   * Phones (and browsers with the PDF viewer disabled) cannot show a PDF in an iframe.
+   */
+  function canPreviewInline() {
+    if (navigator.pdfViewerEnabled === false) return false;
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    return !(touch && isStepper());
   }
 
   /**
@@ -542,25 +699,19 @@
       btn.classList.toggle('active', k === tab);
       btn.setAttribute('aria-selected', String(k === tab));
     });
+    el.tabMerged.textContent = `Bundel (${state.pageCount} hal)`;
+    el.tabSpd.textContent = state.pageCount === 4 ? 'SPD (2 hal)' : 'SPD';
 
-    if (el.btnDownloadTab) {
-      const titles = {
-        merged: `Unduh Bundel (${state.pageCount} Hal)`,
-        st: 'Unduh Surat Tugas',
-        spd: 'Unduh SPD',
-        super: 'Unduh Surat Pernyataan'
-      };
-      el.btnDownloadTab.title = titles[tab] || 'Unduh';
-    }
-
-    el.tabMerged.textContent = `Bundel (${state.pageCount} Hal)`;
-    el.tabSpd.textContent = state.pageCount === 4 ? 'SPD (2 Hal)' : 'SPD';
-
-    const targetUrl = state.urls[tab];
-    if (targetUrl) {
-      el.emptyState.style.display = 'none';
-      el.pdfViewer.style.display = 'block';
-      el.pdfViewer.src = targetUrl;
+    const url = state.urls[tab];
+    const inline = canPreviewInline();
+    el.emptyState.style.display = url ? 'none' : '';
+    el.previewFallback.hidden = !url || inline;
+    el.pdfViewer.style.display = url && inline ? 'block' : 'none';
+    el.btnOpenTab.hidden = !url;
+    if (url) {
+      el.btnOpenTab.href = url;
+      el.btnOpenFallback.href = url;
+      if (inline && el.pdfViewer.getAttribute('src') !== url) el.pdfViewer.src = url;
     }
   }
 
@@ -582,40 +733,160 @@
     return String(str || '').replace(/[^a-zA-Z0-9.-]/g, '_');
   }
 
-  /**
-   * Sync preview container height with bottom of Generate Dokumen button
-   */
-  function syncPreviewHeight() {
-    if (window.innerWidth <= 1024) {
-      if (el.previewContainer) el.previewContainer.style.height = '';
+  const DOC_NAMES = { st: 'Surat Tugas', spd: 'SPD', super: 'Surat Pernyataan', merged: 'Bundel SPD Lengkap' };
+
+  function downloadDoc(key) {
+    triggerDownload(state.urls[key], `${DOC_NAMES[key]} - ${state.fileStem}.pdf`);
+  }
+
+  function printBundle() {
+    if (!state.urls.merged) return;
+    if (canPreviewInline() && state.activeTab === 'merged' && el.pdfViewer.contentWindow) {
+      el.pdfViewer.contentWindow.print();
       return;
     }
-    const btnGen = el.btnGenerate;
-    const preview = el.previewContainer;
-    if (!btnGen || !preview) return;
+    const win = window.open(state.urls.merged, '_blank');
+    if (win) win.focus();
+    else showToast('Izinkan pop-up untuk mencetak, atau unduh bundel lalu cetak dari aplikasi PDF.', true);
+  }
 
-    const btnBottom = btnGen.getBoundingClientRect().bottom;
-    const previewTop = preview.getBoundingClientRect().top;
-    const targetHeight = Math.round(btnBottom - previewTop);
+  // ---------------------------------------------------------------------------
+  // Format 2 helpers & preferences
+  // ---------------------------------------------------------------------------
 
-    if (targetHeight > 400) {
-      preview.style.height = `${targetHeight}px`;
+  /**
+   * Switch Format SPD (1: lampiran saja, 2: halaman depan + lampiran)
+   */
+  function setFormat(format) {
+    state.format = format === 2 ? 2 : 1;
+    el.radioFormat1.checked = state.format === 1;
+    el.radioFormat2.checked = state.format === 2;
+    const open = state.format === 2;
+    el.f2Fields.classList.toggle('is-open', open);
+    el.f2Fields.setAttribute('aria-hidden', String(!open));
+    el.f2Fields.inert = !open;
+    store.set('format', state.format);
+    if (open) {
+      fillPetugasF2();
+      fillAnggaran(false);
     }
+    markStale();
+    updateSummary();
   }
 
   /**
-   * Toggle Ringkasan Dokumen minimize/maximize
+   * Pangkat/golongan and jabatan/instansi follow the selected petugas.
    */
-  function toggleSummary() {
-    if (!el.summaryCard || !el.summaryBody) return;
-    const isExpanded = el.summaryCard.classList.toggle('expanded');
-    el.summaryBody.style.display = isExpanded ? 'block' : 'none';
-    if (el.summaryToggleText) {
-      el.summaryToggleText.textContent = isExpanded ? 'Tutup' : 'Buka';
+  function fillPetugasF2() {
+    const p = getCurrentPetugas();
+    if (p.isOrganik) {
+      el.inputGolongan.value = p.golongan || '';
+      el.inputJabatanInstansi.value = p.jabatanInstansi || p.jabatan || '';
+    } else if (el.inputGolongan.dataset.for !== 'mitra') {
+      el.inputGolongan.value = Core.DEFAULTS.golonganMitra;
+      el.inputJabatanInstansi.value = '';
     }
-    if (el.summaryToggle) {
-      el.summaryToggle.setAttribute('aria-expanded', String(isExpanded));
+    el.inputGolongan.dataset.for = p.isOrganik ? 'organik' : 'mitra';
+    el.inputJabatanInstansi.placeholder = p.isOrganik ? 'Terisi otomatis dari data pegawai' : 'Kosongkan untuk memakai jabatan';
+  }
+
+  /**
+   * Fill Program/Kegiatan/Komponen and Mata anggaran from the kode akun.
+   * Fields edited by hand are kept unless `force` is true.
+   */
+  function fillAnggaran(force) {
+    const auto = Core.anggaranDariPembebanan(el.inputPembebanan.value);
+    const values = {
+      'program-kode': auto ? auto.program.kode : '',
+      'program-uraian': auto ? auto.program.uraian : '',
+      'kegiatan-kode': auto ? auto.kegiatan.kode : '',
+      'kegiatan-uraian': auto ? auto.kegiatan.uraian : '',
+      'komponen-kode': auto ? auto.komponen.kode : '',
+      'komponen-uraian': auto ? auto.komponen.uraian : '',
+      'mata-anggaran': auto ? auto.mataAnggaran : ''
+    };
+    document.querySelectorAll('[data-anggaran]').forEach((input) => {
+      if (force) delete input.dataset.manual;
+      if (input.dataset.manual === '1') return;
+      input.value = values[input.dataset.anggaran];
+    });
+    if (force && !auto) showToast('Kode akun tidak dikenali. Isi Program/Kegiatan/Komponen secara manual.', true);
+    updateSummary();
+  }
+
+  function savePpk() {
+    store.set('ppk', currentPpk());
+  }
+
+  function loadPreferences() {
+    const ppk = Object.assign({}, Core.PPK_DEFAULT, store.get('ppk', {}));
+    el.inputPpkNama.value = ppk.nama || '';
+    el.inputPpkNip.value = ppk.nip || '';
+    el.inputPpkProgram.value = ppk.program || '';
+    const last = store.get('terakhir', {});
+    Object.entries(REMEMBERED).forEach(([key, getter]) => {
+      if (last[key]) getter().value = last[key];
+    });
+    setFormat(store.get('format', Core.DEFAULTS.format));
+  }
+
+  function rememberField(key) {
+    const last = store.get('terakhir', {});
+    last[key] = REMEMBERED[key]().value;
+    store.set('terakhir', last);
+  }
+
+  function setPetugasMode(mode) {
+    state.petugasMode = mode;
+    const organik = mode === 'organik';
+    el.radioOrganik.checked = organik;
+    el.radioNonorganik.checked = !organik;
+    el.labelPetugasOrganik.classList.toggle('active', organik);
+    el.labelPetugasNonorganik.classList.toggle('active', !organik);
+    el.containerOrganik.style.display = organik ? 'block' : 'none';
+    el.containerNonorganik.style.display = organik ? 'none' : 'block';
+    updateOrganikBadge();
+    fillPetugasF2();
+    updateSummary();
+  }
+
+  function setDatesSynced(synced) {
+    el.syncDatesCheckbox.checked = synced;
+    el.tglPerjalananContainer.style.display = synced ? 'none' : 'grid';
+    if (synced) {
+      el.tglMulai.value = el.tglSpd.value;
+      el.tglSelesai.value = el.tglSpd.value;
+    } else if (!el.tglMulai.value) {
+      el.tglMulai.value = el.tglSpd.value;
     }
+  }
+
+  function toggleAccordion() {
+    const isOpen = el.accordionContent.classList.toggle('open');
+    el.accordionToggle.setAttribute('aria-expanded', String(isOpen));
+    el.accordionIndicator.innerHTML = isOpen
+      ? '<i class="bi bi-chevron-up" aria-hidden="true"></i> Sembunyikan'
+      : '<i class="bi bi-chevron-down" aria-hidden="true"></i> Tampilkan';
+  }
+
+  /**
+   * "Atur ulang form": clear what was typed, keep remembered preferences.
+   */
+  function resetForm() {
+    if (!window.confirm('Kosongkan semua isian? Pilihan tersimpan (format, PPK, kode akun terakhir) tetap dipakai.')) return;
+    el.form.reset();
+    document.querySelectorAll('[data-anggaran]').forEach((input) => { delete input.dataset.manual; });
+    delete el.inputGolongan.dataset.for;
+    revokeUrls();
+    el.resultActions.hidden = true;
+    el.btnGenerate.hidden = false;
+    state.visited = new Set([1]);
+    state.revealed = new Set();
+    setPetugasMode('organik');
+    setDatesSynced(true);
+    loadPreferences();
+    goToStep(1);
+    showToast('Form dikosongkan.');
   }
 
   // ---------------------------------------------------------------------------
@@ -631,22 +902,23 @@
       return;
     }
     const row = (o) => Core.BATCH_COLUMNS.reduce((acc, k) => { acc[k] = o[k] || ''; return acc; }, {});
+    const pegawai = (window.PEGAWAI_ORGANIK || [])[0] || {};
     const templateRows = [
       row({
-        'Nomor Surat': 'B-11/7301/SS.330/2026', 'Tanggal ST': '15/07/2026', 'Tanggal SPD': '20/07/2026',
-        'Kategori': 'Organik', 'Nama Petugas': (window.PEGAWAI_ORGANIK && window.PEGAWAI_ORGANIK[0] || {}).nama,
+        'Nomor Surat': 'B-11/7301/SS.330/2026', 'Tanggal ST': '15/07/2026', 'Tanggal SPD': '20/07/2026', 'Format SPD': '1',
+        'Kategori': 'Organik', 'Nama Petugas': pegawai.nama,
         'Kecamatan Asal': 'Benteng', 'Kecamatan Tujuan': 'Bontomatene',
         'Tanggal Mulai': '20/07/2026', 'Tanggal Selesai': '20/07/2026',
         'Tujuan': 'Translok Petugas Pendataan SE2026 di Kecamatan Bontomatene',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2', 'Uraian Pembebanan': 'Transport Daerah Sulit'
       }),
       row({
-        'Nomor Surat': 'B-12/7301/SS.330/2026', 'Tanggal ST': '15/07/2026', 'Tanggal SPD': '24/07/2026',
+        'Nomor Surat': 'B-12/7301/SS.330/2026', 'Tanggal ST': '15/07/2026', 'Tanggal SPD': '15/07/2026', 'Format SPD': '2',
         'Kategori': 'Mitra', 'Nama Petugas': 'Nama Mitra', 'NIP': '7301000000000000', 'Jabatan': 'Mitra Sensus/Survei',
-        'Kecamatan Asal': 'Benteng', 'Kecamatan Tujuan': 'Pasimarannu',
-        'Tanggal Mulai': '24/07/2026', 'Tanggal Selesai': '26/07/2026',
-        'Tujuan': 'Translok Petugas Pendataan SE2026 di Kecamatan Pasimarannu',
-        'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2', 'Uraian Pembebanan': 'Transport Daerah Sulit'
+        'Pangkat Golongan': '-', 'Kecamatan Asal': 'Benteng', 'Kecamatan Tujuan': 'Pasimarannu',
+        'Tempat Keberangkatan': 'Kabupaten Kepulauan Selayar', 'Tanggal Mulai': '22/07/2026', 'Tanggal Selesai': '26/07/2026',
+        'Tujuan': 'Translok Pendampingan Petugas SE2026', 'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
+        'Uraian Pembebanan': 'Transport Daerah Sulit', 'Alat Angkutan': 'Kendaraan Umum'
       })
     ];
     const wb = window.XLSX.utils.book_new();
@@ -670,7 +942,7 @@
         const json = window.XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
 
         if (!json || json.length === 0) {
-          showBatchMessage('File Excel kosong atau tidak memiliki baris data.');
+          showBatchMessage('File Excel kosong atau tidak memiliki baris data. Gunakan template yang disediakan.');
           return;
         }
 
@@ -696,7 +968,6 @@
   }
 
   function showBatchMessage(msg) {
-    if (!el.batchMessage) return;
     el.batchMessage.textContent = msg;
     el.batchMessage.hidden = !msg;
   }
@@ -723,9 +994,9 @@
         d.stNo || '-',
         d.tglSpdIndo || '-',
         `${Core.shortTempat(d.tempatBerangkat) || '-'} → ${Core.shortTempat(d.kecTujuan) || '-'}`,
-        d.petugas.nama || '-',
+        `${d.petugas.nama || '-'} (${d.petugas.isOrganik ? 'Organik' : 'Mitra'})`,
         d.format === 2 ? '2' : (d.format === 1 ? '1' : '?'),
-        d.petugas.isOrganik ? 'Organik' : 'Mitra'
+        row.errors.length ? 'Perlu diperbaiki' : 'Siap'
       ];
       cells.forEach((c, i) => {
         const td = document.createElement('td');
@@ -736,6 +1007,7 @@
         } else {
           td.textContent = c;
         }
+        if (i === cells.length - 1) td.className = row.errors.length ? 'status-bad' : 'status-ok';
         tr.appendChild(td);
       });
       el.batchTbody.appendChild(tr);
@@ -744,19 +1016,38 @@
         er.className = 'row-errors';
         const td = document.createElement('td');
         td.colSpan = cells.length;
-        td.textContent = row.errors.map(e => e.message).join(' ');
+        const msg = document.createElement('span');
+        msg.className = 'row-error-text';
+        msg.textContent = row.errors.map(e => e.message).join(' ');
+        td.appendChild(msg);
         er.appendChild(td);
         el.batchTbody.appendChild(er);
       }
     });
 
     showBatchMessage(invalid
-      ? `${invalid} baris bermasalah (ditandai merah) dan akan dilewati. ${valid} baris siap dibuat.`
+      ? `${invalid} baris bermasalah (ditandai merah) dan akan dilewati. ${valid} baris siap dibuat. Perbaiki di Excel lalu unggah ulang, atau lanjutkan dengan baris yang valid saja.`
       : '');
+    const suffix = invalid ? ` (${valid} baris valid)` : '';
+    el.btnBatchPdfText.textContent = `Unduh 1 bundel PDF${suffix}`;
+    el.btnBatchZipText.textContent = `Unduh file terpisah (.zip)${suffix}`;
     el.btnGenerateBatchPdf.disabled = valid === 0;
     el.btnGenerateBatchZip.disabled = valid === 0;
+    el.btnBatchReport.hidden = invalid === 0;
     el.dropzone.style.display = 'none';
     el.batchPreviewContainer.style.display = 'block';
+  }
+
+  /**
+   * Excel report of the rows that need fixing, with the original columns.
+   */
+  function downloadBatchReport() {
+    const rows = state.batchRows.filter(r => r.errors.length).map(r => Object.assign(
+      { 'Baris Excel': r.excelRow, 'Masalah': r.errors.map(e => e.message).join(' ') }, r.raw));
+    if (!rows.length) return;
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet(rows), 'Perlu diperbaiki');
+    window.XLSX.writeFile(wb, 'Laporan_Baris_Bermasalah.xlsx');
   }
 
   /**
@@ -770,6 +1061,12 @@
     el.excelFileInput.value = '';
     el.batchProgress.style.display = 'none';
     showBatchMessage('');
+  }
+
+  function setProgress(pct, text) {
+    el.progressBarFill.style.width = `${pct}%`;
+    el.progressBar.setAttribute('aria-valuenow', String(pct));
+    el.progressText.textContent = text;
   }
 
   /**
@@ -786,8 +1083,8 @@
       const templates = await loadTemplates();
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        el.progressBarFill.style.width = `${Math.round(((i + 1) / rows.length) * 100)}%`;
-        el.progressText.textContent = `${label} ${i + 1} dari ${rows.length} (${row.data.petugas.nama} - ${row.data.stNo})...`;
+        setProgress(Math.round(((i + 1) / rows.length) * 100),
+          `${label} ${i + 1} dari ${rows.length} (${row.data.petugas.nama} - ${row.data.stNo})...`);
         await perRow(await Render.buildBundle(row.data, templates), row, i);
       }
       return true;
@@ -810,7 +1107,6 @@
     const master = await window.PDFLib.PDFDocument.create();
     const ok = await runBatch('Memproses', (bundle) => Render.appendDocs(master, [bundle.merged]));
     if (!ok) return;
-    el.progressText.textContent = 'Menyusun berkas PDF akhir...';
     const total = validBatchRows().length;
     triggerDownload(pdfUrl(await master.save()), `Bundel_Semua_SPD_${total}_Data.pdf`, true);
     showToast(`Berhasil mengunduh ${total} set dokumen!`);
@@ -867,118 +1163,62 @@
     }
   }
 
-  /**
-   * Switch Format SPD (1: lampiran saja, 2: halaman depan + lampiran)
-   */
-  function setFormat(format) {
-    state.format = format === 2 ? 2 : 1;
-    el.radioFormat1.checked = state.format === 1;
-    el.radioFormat2.checked = state.format === 2;
-    el.f2Fields.hidden = state.format !== 2;
-    store.set('format', state.format);
-    if (state.format === 2) {
-      fillPetugasF2();
-      fillAnggaran(false);
-    }
-    updateSummary();
-  }
+  // ---------------------------------------------------------------------------
+  // Listeners
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Pangkat/golongan and jabatan/instansi follow the selected petugas.
-   */
-  function fillPetugasF2() {
-    const p = getCurrentPetugas();
-    if (p.isOrganik) {
-      el.inputGolongan.value = p.golongan || '';
-      el.inputJabatanInstansi.value = p.jabatanInstansi || p.jabatan || '';
-    } else if (el.inputGolongan.dataset.for !== 'mitra') {
-      el.inputGolongan.value = Core.DEFAULTS.golonganMitra;
-      el.inputJabatanInstansi.value = '';
-    }
-    el.inputGolongan.dataset.for = p.isOrganik ? 'organik' : 'mitra';
-    el.inputJabatanInstansi.placeholder = p.isOrganik ? 'Terisi otomatis dari data pegawai' : 'Kosongkan untuk memakai jabatan';
-  }
-
-  /**
-   * Fill Program/Kegiatan/Komponen and Mata anggaran from the kode akun.
-   * Fields edited by hand are kept unless `force` is true.
-   */
-  function fillAnggaran(force) {
-    const auto = Core.anggaranDariPembebanan(el.inputPembebanan.value);
-    const values = {
-      'program-kode': auto ? auto.program.kode : '',
-      'program-uraian': auto ? auto.program.uraian : '',
-      'kegiatan-kode': auto ? auto.kegiatan.kode : '',
-      'kegiatan-uraian': auto ? auto.kegiatan.uraian : '',
-      'komponen-kode': auto ? auto.komponen.kode : '',
-      'komponen-uraian': auto ? auto.komponen.uraian : '',
-      'mata-anggaran': auto ? auto.mataAnggaran : ''
-    };
-    document.querySelectorAll('[data-anggaran]').forEach((input) => {
-      if (force) delete input.dataset.manual;
-      if (input.dataset.manual === '1') return;
-      input.value = values[input.dataset.anggaran];
-    });
-    if (force && !auto) showToast('Kode akun tidak dikenali. Isi Program/Kegiatan/Komponen secara manual.', true);
-    updateSummary();
-  }
-
-  function savePpk() {
-    store.set('ppk', currentPpk());
-  }
-
-  function loadPreferences() {
-    const ppk = Object.assign({}, Core.PPK_DEFAULT, store.get('ppk', {}));
-    el.inputPpkNama.value = ppk.nama || '';
-    el.inputPpkNip.value = ppk.nip || '';
-    el.inputPpkProgram.value = ppk.program || '';
-    setFormat(store.get('format', Core.DEFAULTS.format));
+  function setMode(batch) {
+    el.modeSingleBtn.classList.toggle('active', !batch);
+    el.modeBatchBtn.classList.toggle('active', batch);
+    el.modeSingleBtn.setAttribute('aria-pressed', String(!batch));
+    el.modeBatchBtn.setAttribute('aria-pressed', String(batch));
+    el.singleModeSection.style.display = batch ? 'none' : 'block';
+    el.batchModeSection.style.display = batch ? 'block' : 'none';
+    document.body.classList.toggle('is-batch', batch);
   }
 
   /**
    * Initialize event handlers
    */
   function initListeners() {
-    // Mode Switch
-    el.modeSingleBtn.addEventListener('click', () => {
-      el.modeSingleBtn.classList.add('active');
-      el.modeBatchBtn.classList.remove('active');
-      el.singleModeSection.style.display = 'block';
-      el.batchModeSection.style.display = 'none';
-    });
+    el.modeSingleBtn.addEventListener('click', () => setMode(false));
+    el.modeBatchBtn.addEventListener('click', () => setMode(true));
 
-    el.modeBatchBtn.addEventListener('click', () => {
-      el.modeBatchBtn.classList.add('active');
-      el.modeSingleBtn.classList.remove('active');
-      el.singleModeSection.style.display = 'none';
-      el.batchModeSection.style.display = 'block';
+    // Stepper
+    el.stepLinks.forEach((btn) => {
+      btn.addEventListener('click', () => goToStep(parseInt(btn.dataset.goto, 10)));
     });
+    document.querySelectorAll('[data-next]').forEach((btn) => btn.addEventListener('click', nextStep));
+    document.querySelectorAll('[data-prev]').forEach((btn) => btn.addEventListener('click', () => goToStep(state.step - 1)));
+    el.btnReset.addEventListener('click', resetForm);
+    if (stepperQuery.addEventListener) stepperQuery.addEventListener('change', applyLayout);
+    else stepperQuery.addListener(applyLayout);
 
-    // Petugas Type Switch (Organik vs Non-Organik)
-    el.radioOrganik.addEventListener('change', () => {
-      if (el.radioOrganik.checked) {
-        state.petugasMode = 'organik';
-        el.labelPetugasOrganik.classList.add('active');
-        el.labelPetugasNonorganik.classList.remove('active');
-        el.containerOrganik.style.display = 'block';
-        el.containerNonorganik.style.display = 'none';
-        updateOrganikBadge();
-        fillPetugasF2();
+    // On desktop, track which step is being edited.
+    el.form.addEventListener('focusin', (e) => {
+      const n = stepOf(e.target);
+      if (!isStepper() && n !== state.step && e.target.closest('.step')) {
+        // Moving on to a later section reveals the errors left behind.
+        for (let i = 1; i < n; i++) state.revealed.add(i);
+        state.step = n;
+        state.visited.add(n);
         updateSummary();
       }
     });
 
-    el.radioNonorganik.addEventListener('change', () => {
-      if (el.radioNonorganik.checked) {
-        state.petugasMode = 'nonorganik';
-        el.labelPetugasNonorganik.classList.add('active');
-        el.labelPetugasOrganik.classList.remove('active');
-        el.containerOrganik.style.display = 'none';
-        el.containerNonorganik.style.display = 'block';
-        fillPetugasF2();
-        updateSummary();
-      }
+    // Any edit makes generated documents stale and refreshes the summary.
+    el.form.addEventListener('input', () => {
+      markStale();
+      updateSummary();
     });
+    el.form.addEventListener('change', () => {
+      markStale();
+      updateSummary();
+    });
+
+    // Petugas Type Switch (Organik vs Mitra)
+    el.radioOrganik.addEventListener('change', () => { if (el.radioOrganik.checked) setPetugasMode('organik'); });
+    el.radioNonorganik.addEventListener('change', () => { if (el.radioNonorganik.checked) setPetugasMode('nonorganik'); });
 
     el.selectPegawaiOrganik.addEventListener('change', () => {
       updateOrganikBadge();
@@ -996,12 +1236,14 @@
     // Anggaran: auto-fill from kode akun until the user edits a field by hand
     el.inputPembebanan.addEventListener('input', () => fillAnggaran(false));
     document.querySelectorAll('[data-anggaran]').forEach((input) => {
-      input.addEventListener('input', () => {
-        input.dataset.manual = '1';
-        updateSummary();
-      });
+      input.addEventListener('input', () => { input.dataset.manual = '1'; });
     });
     el.btnIsiAnggaran.addEventListener('click', () => fillAnggaran(true));
+
+    // Remembered habits
+    Object.entries(REMEMBERED).forEach(([key, getter]) => {
+      getter().addEventListener('change', () => rememberField(key));
+    });
 
     // PPK
     el.selectPpk.addEventListener('change', () => {
@@ -1013,15 +1255,7 @@
       updateSummary();
     });
     [el.inputPpkNama, el.inputPpkNip, el.inputPpkProgram].forEach((input) => {
-      input.addEventListener('input', () => {
-        savePpk();
-        updateSummary();
-      });
-    });
-
-    [el.inputTempatBerangkat, el.inputGolongan, el.inputJabatanInstansi, el.inputAlatAngkut,
-      el.inputTingkatBiaya, el.inputKeterangan].forEach((input) => {
-      input.addEventListener('input', updateSummary);
+      input.addEventListener('input', savePpk);
     });
 
     // Kecamatan change: auto update tujuan text if it ends with "di Kecamatan X"
@@ -1036,95 +1270,36 @@
 
     // Date sync
     el.tglSpd.addEventListener('change', () => {
-      if (el.syncDatesCheckbox.checked) {
-        el.tglMulai.value = el.tglSpd.value;
-        el.tglSelesai.value = el.tglSpd.value;
-      }
+      if (el.syncDatesCheckbox.checked) setDatesSynced(true);
       updateSummary();
     });
-
     el.syncDatesCheckbox.addEventListener('change', () => {
-      const isLocked = el.syncDatesCheckbox.checked;
-      el.tglPerjalananContainer.style.display = isLocked ? 'none' : 'grid';
-      if (isLocked) {
-        el.tglMulai.value = el.tglSpd.value;
-        el.tglSelesai.value = el.tglSpd.value;
-      }
+      setDatesSynced(el.syncDatesCheckbox.checked);
       updateSummary();
     });
 
-    [
-      el.noSurat, el.tglMulai, el.tglSelesai, el.inputTujuan, el.inputTglSt, el.selectKecamatanAsal,
-      el.inputPembebanan, el.inputUraianBeban, el.inputNama, el.inputNip,
-      el.inputJabatan, el.inputUnitKerja
-    ].forEach(input => {
-      if (input) {
-        input.addEventListener('input', updateSummary);
-        input.addEventListener('change', updateSummary);
-      }
-    });
-
-    el.accordionToggle.addEventListener('click', () => {
-      el.accordionContent.classList.toggle('open');
-      const isOpen = el.accordionContent.classList.contains('open');
-      el.accordionToggle.setAttribute('aria-expanded', String(isOpen));
-      el.accordionIndicator.innerHTML = isOpen
-        ? '<i class="bi bi-chevron-up"></i> Sembunyikan'
-        : '<i class="bi bi-chevron-down"></i> Tampilkan';
-    });
+    el.accordionToggle.addEventListener('click', toggleAccordion);
 
     el.form.addEventListener('submit', (e) => {
       e.preventDefault();
       generateSingle();
     });
 
-    // Download active tab button
-    if (el.btnDownloadTab) {
-      el.btnDownloadTab.addEventListener('click', () => {
-        const tglStr = Core.formatIndoDate(el.tglSpd.value);
-        const no = fileSafe(Core.formatNomor(el.noSurat.value).stNo);
-        const names = {
-          st: 'Surat Tugas', spd: 'SPD', super: 'Surat Pernyataan', merged: 'Bundel SPD Lengkap'
-        };
-        triggerDownload(state.urls[state.activeTab], `${names[state.activeTab]} - ${no} - ${tglStr}.pdf`);
+    // Result actions
+    el.btnDownloadBundle.addEventListener('click', () => downloadDoc('merged'));
+    el.downloadButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        downloadDoc(btn.dataset.download);
+        btn.closest('details').open = false;
       });
-    }
+    });
+    el.btnPrint.addEventListener('click', printBundle);
 
     // Preview tabs
     el.tabMerged.addEventListener('click', () => updateViewerTab('merged'));
     el.tabSt.addEventListener('click', () => updateViewerTab('st'));
     el.tabSpd.addEventListener('click', () => updateViewerTab('spd'));
     el.tabSuper.addEventListener('click', () => updateViewerTab('super'));
-
-    el.btnPrint.addEventListener('click', () => {
-      if (el.pdfViewer && el.pdfViewer.contentWindow) {
-        el.pdfViewer.contentWindow.print();
-      } else if (state.urls.merged) {
-        const win = window.open(state.urls.merged, '_blank');
-        if (win) {
-          win.focus();
-          win.print();
-        }
-      }
-    });
-
-    // Summary Card minimize / maximize
-    if (el.summaryToggle) {
-      el.summaryToggle.addEventListener('click', toggleSummary);
-      el.summaryToggle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleSummary();
-        }
-      });
-    }
-
-    // Sync preview height on resize and form changes
-    if (window.ResizeObserver && el.formCard) {
-      const ro = new ResizeObserver(() => syncPreviewHeight());
-      ro.observe(el.formCard);
-    }
-    window.addEventListener('resize', syncPreviewHeight);
 
     // Excel Batch Listeners
     el.btnDownloadTemplate.addEventListener('click', downloadExcelTemplate);
@@ -1158,15 +1333,16 @@
     el.btnClearBatch.addEventListener('click', clearBatch);
     el.btnGenerateBatchPdf.addEventListener('click', generateBatchMergedPdf);
     el.btnGenerateBatchZip.addEventListener('click', generateBatchZip);
+    el.btnBatchReport.addEventListener('click', downloadBatchReport);
   }
 
   // Init
   function init() {
     loadPreferences();
     populatePegawaiDropdown();
-    updateSummary();
     initListeners();
-    syncPreviewHeight();
+    applyLayout();
+    goToStep(1, { scroll: false });
     trySyncGoogleSheet();
   }
 
