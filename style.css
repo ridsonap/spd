@@ -584,6 +584,11 @@ body {
   flex-wrap: wrap;
 }
 
+.preview-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
 .tab-btn {
   background: #f1f5f9;
   border: 1px solid transparent;

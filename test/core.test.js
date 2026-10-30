@@ -166,6 +166,11 @@ test('validateSpdInput: pesan jelas dan tanpa data contoh', () => {
   }
   const range = Core.validateSpdInput(contohInput({ tglMulai: '2026-06-26', tglSelesai: '2026-06-22' }));
   assert.deepStrictEqual(range, [{ field: 'tglSelesai', message: 'Tanggal selesai tidak boleh sebelum tanggal mulai.' }]);
+  // The SPD is issued on or after the surat tugas it is based on.
+  const spdSebelumSt = Core.validateSpdInput(contohInput({ tglSt: '2026-06-15', tglSpd: '2026-06-14' }));
+  assert.deepStrictEqual(spdSebelumSt, [{ field: 'tglSpd', message: 'Tanggal SPD tidak boleh sebelum tanggal surat tugas.' }]);
+  assert.deepStrictEqual(Core.validateSpdInput(contohInput({ tglSt: '2026-06-15', tglSpd: '2026-06-15' })), []);
+  assert.deepStrictEqual(Core.validateSpdInput(contohInput({ tglSt: '2026-06-15', tglSpd: '2026-06-20' })), []);
   const nik = Core.validateSpdInput(contohInput({ isOrganik: false, nip: '730103481176' }));
   assert.match(nik[0].message, /16 digit/);
   const nomor = Core.validateSpdInput(contohInput({ noSurat: '114' }));
