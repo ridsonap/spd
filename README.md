@@ -3,8 +3,8 @@
 Aplikasi web statis client-side untuk membuat dokumen administrasi resmi perjalanan dinas BPS:
 1. **Surat Tugas (ST)**
 2. **Surat Perjalanan Dinas (SPD)**
-3. **Surat Pernyataan Bebas Kendaraan Dinas (Super)**
-4. **Bundel Lengkap Siap Cetak (Merged 3 Halaman)**
+3. **Surat Pernyataan** tidak menggunakan kendaraan dinas
+4. **Bundel Lengkap Siap Cetak** (semua dokumen digabung dalam satu PDF)
 
 **Akses Web**: [https://ridsonap.is-a.dev/spd/](https://ridsonap.is-a.dev/spd/)
 
@@ -12,25 +12,44 @@ Aplikasi web statis client-side untuk membuat dokumen administrasi resmi perjala
 
 ## Fitur Utama
 
-- **100% Client-Side**: Berjalan langsung di peramban tanpa server backend atau ketergantungan API eksternal. Data tetap privat di perangkat pengguna.
-- **Desain Bersih & Profesional**: Menggunakan **Bootstrap Icons** dan favicon SVG resmi (bebas emoji).
+- **100% Client-Side**: berjalan di peramban tanpa server. Data tetap di perangkat pengguna. Satu-satunya request jaringan adalah sinkronisasi daftar pegawai dari Google Sheet (opsional).
 - **Pilihan Kategori Petugas**:
-  - **Pegawai Organik BPS**: Terhubung langsung dengan database 26 pegawai BPS Kabupaten Kepulauan Selayar dari [Google Spreadsheet](https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247). Otomatis mengisi Nama, NIP Baru, Jabatan, Golongan, dan Unit Kerja.
-  - **Non-Organik / Mitra**: Opsi input manual lengkap untuk Nama, NIP/NIK, dan Jabatan (misal Mitra Sensus/Survei / PPL).
-- **Form Satuan**:
-  - **Nomor Surat Lengkap**: Input nomor surat tugas lengkap (default: `B-11/7301/VS.330/2026`). Di SPD, awalan `B-` otomatis dihilangkan sesuai standar penomoran SPD BPS.
-  - **Tanggal SPD & Surat Pernyataan**: Otomatis dikonversi ke format penanggalan resmi BPS (misal: `20 Juli 2026`).
-  - **Dropdown Kecamatan**: Pilihan langsung 11 kecamatan di Kabupaten Kepulauan Selayar.
-  - **Tanggal Perjalanan**: Default tersinkronisasi 1 hari dengan tanggal SPD, atau tentukan rentang tanggal perjalanan dinas.
-  - **Tujuan Dinamis (Dynamic Reflow)**: Input fleksibel untuk Tujuan/Tugas (otomatis menyesuaikan Y-posisi tanpa bertumpuk untuk 1 baris, 2 baris, atau 3+ baris).
-  - **Pembebanan**: Kode Akun Pembebanan MAK dan Uraian Pembebanan.
-- **Batch Generator (Upload Excel)**:
-  - Tombol **Unduh Template Excel** (`.xlsx`) siap pakai dengan contoh data Organik & Mitra.
-  - Unggah file Excel (`.xlsx`, `.xls`, `.csv`) dengan drag & drop atau browse file.
-  - Otomatis mencocokkan data petugas organik jika nama sesuai database.
-  - Unduh **1 Bundel PDF Gabungan Siap Cetak** (semua petugas & tanggal terangkum urut).
-  - Unduh **Paket Arsip ZIP** (berkas PDF tersimpan rapi per subfolder).
-- **Pratinjau Interaktif & Cetak**: Pratinjau langsung per tab dokumen dan tombol cetak langsung.
+  - **Pegawai Organik BPS**: daftar pegawai dari `pegawai.js`, otomatis diperbarui dari [Google Spreadsheet](https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247) bila sinkronisasi berhasil dan datanya lengkap. Indikator di bawah pilihan pegawai menunjukkan sumbernya (lokal atau tersinkron).
+  - **Non-Organik / Mitra**: isi Nama, NIP (18 digit) atau NIK (16 digit), dan Jabatan secara manual.
+- **Form Satuan**: nomor surat lengkap (di SPD awalan `B-` dihilangkan otomatis), tanggal Surat Tugas, tanggal SPD, kecamatan asal dan tujuan, rentang tanggal perjalanan, tujuan/tugas (otomatis dibungkus 1–3+ baris), dan kode akun pembebanan.
+- **Validasi yang jelas**: isian yang kosong atau salah ditandai di bawah field beserta cara memperbaikinya. Dokumen tidak pernah diisi data contoh secara diam-diam.
+- **Batch Generator (Excel)**: unduh template, isi, lalu unggah. Baris yang bermasalah ditandai merah dengan alasannya dan dilewati. Hasilnya bisa diunduh sebagai satu bundel PDF atau ZIP berisi file per orang.
+
+---
+
+## Struktur
+
+| File | Isi |
+|---|---|
+| `index.html`, `style.css` | Tampilan |
+| `app.js` | Logika UI (form, ringkasan, batch, pratinjau) |
+| `core.js` | Fungsi murni (format tanggal/nomor, validasi, parsing Excel/CSV, pembebanan, encoding WinAnsi). UMD: `window.SPDCore` / `require('./core.js')` |
+| `render.js` | Pembuat PDF dari template. UMD: `window.SPDRender` / `require('./render.js')` |
+| `pegawai.js` | Daftar pegawai organik (cadangan lokal) |
+| `templates/*.pdf` | **Sumber utama** template PDF |
+| `templates.js` | Salinan base64 dari `templates/*.pdf` agar aplikasi bisa dibuka lewat `file://`. Dibuat oleh skrip, jangan diedit manual |
+| `vendor/` | pdf-lib, pako, SheetJS, JSZip, Bootstrap Icons (tanpa CDN) |
+| `scripts/` | `build-templates.js`, `smoke.js` |
+| `test/` | Tes `node --test` |
+
+Dokumen dibuat dengan memuat template PDF, membuka content stream, lalu mengganti teks berkoordinat tetap. Setiap penggantian memakai `replaceStrict`: jika pola template tidak ditemukan, proses berhenti dengan pesan yang menyebut bagian mana yang tidak cocok. Stream ditulis kembali dalam encoding WinAnsi (cp1252), sama dengan encoding font template, sehingga huruf seperti `é`, `’`, atau `–` tercetak dengan benar.
+
+## Pengembangan
+
+Tidak ada build step. Buka `index.html` langsung, atau jalankan server statis apa pun (mis. `python3 -m http.server`).
+
+```bash
+npm test                 # unit test + cek templates.js sinkron
+npm run smoke            # buat bundel contoh ke out/ dan cek jumlah halaman + teks kunci
+npm run build:templates  # setelah mengganti templates/*.pdf
+```
+
+Tes hanya memakai Node (versi 18+) dan library di `vendor/`; `npm install` tidak diperlukan.
 
 ---
 

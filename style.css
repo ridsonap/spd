@@ -665,3 +665,73 @@ body {
   background: #ffffff;
   margin-top: auto;
 }
+
+/* Validation */
+:root {
+  --danger: #b91c1c;
+  --danger-light: #fef2f2;
+  --danger-border: #fecaca;
+}
+
+.form-input[aria-invalid="true"], .form-select[aria-invalid="true"], .form-textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+  background-color: var(--danger-light);
+}
+
+.field-error {
+  font-size: 0.775rem;
+  color: var(--danger);
+  margin-top: 0.3rem;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.field-error::before {
+  content: "\F33A"; /* bi-exclamation-circle */
+  font-family: "bootstrap-icons";
+  flex-shrink: 0;
+}
+
+.form-errors {
+  background: var(--danger-light);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.form-errors ul {
+  margin: 0.35rem 0 0 1.1rem;
+}
+
+.form-errors a {
+  color: var(--danger);
+}
+
+.batch-message {
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.8rem;
+}
+
+.batch-table tr.row-invalid td {
+  background: var(--danger-light);
+  border-bottom: none;
+}
+
+.batch-table tr.row-errors td {
+  background: var(--danger-light);
+  color: var(--danger);
+  font-size: 0.75rem;
+  padding-top: 0;
+}
+
+.toast.toast-error {
+  background: var(--danger);
+}
