@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smoke test: build bundles from the reference data, check the
+ * Smoke test: build Format 1 and Format 2 bundles from the reference data, check the
  * page count and key texts, and write the PDFs to out/ for visual inspection.
  */
 const fs = require('fs');
@@ -14,6 +14,11 @@ const OUT = path.join(__dirname, '..', 'out');
 const cases = [
   { name: 'format1', input: contohInput({ format: 1 }), pages: 3,
     texts: ['B-114/7301/SS.360/2026', '114/7301/SS.360/2026', 'Kecamatan Benteng', 'Kecamatan Pasimarannu', '22 Juni 2026 s.d. 26 Juni 2026', 'Muhammad Nur,S.Sos'] },
+  { name: 'format2', input: contohInput(), pages: 4,
+    texts: ['114/7301/SS.360/2026', '5 hari', 'Kecamatan Pasimarannu', 'Fakhri Hafidzul Azhar,S.Tr.Stat.', 'Telah diperiksa',
+      'Pelaksanaan SE2026', 'Kabupaten Kepulauan Selayar', 'Muhammad Nur,S.Sos'] },
+  { name: 'format2-maksud-3-baris', pages: 4, texts: ['5 hari'],
+    input: contohInput({ tujuan: 'Translok Pendampingan Petugas Pendataan Sensus Ekonomi 2026 untuk wilayah kepulauan terluar termasuk desa pesisir serta pulau-pulau kecil' }) }
 ];
 
 (async () => {
