@@ -195,10 +195,89 @@
                 </div>
               </div>
 
-              <!-- Collapsible Advanced: Tanggal TTD ST & Unit Kerja -->
+              <!-- Format SPD -->
+              <fieldset class="form-group format-fieldset">
+                <legend class="form-label">Format SPD *</legend>
+                <div class="format-options">
+                  <label class="format-option" for="radio-format-1">
+                    <input type="radio" name="format_spd" id="radio-format-1" value="1" checked>
+                    <span class="format-option-title">Format 1: Lampiran saja</span>
+                    <span class="format-option-desc">1 halaman lampiran SPD</span>
+                  </label>
+                  <label class="format-option" for="radio-format-2">
+                    <input type="radio" name="format_spd" id="radio-format-2" value="2">
+                    <span class="format-option-title">Format 2: Halaman depan + Lampiran</span>
+                    <span class="format-option-desc">Halaman depan + lampiran (ditandatangani PPK)</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Field khusus Format 2 -->
+              <div id="f2-fields" class="f2-fields" hidden>
+                <div class="f2-fields-inner">
+                  <div class="form-group">
+                    <label class="form-label" for="input-tempat-berangkat">Tempat Keberangkatan (Tempat Kedudukan) *</label>
+                    <input type="text" id="input-tempat-berangkat" class="form-input" value="Kabupaten Kepulauan Selayar" aria-required="true">
+                  </div>
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label" for="input-golongan">Pangkat/Golongan</label>
+                      <input type="text" id="input-golongan" class="form-input" placeholder="Contoh: III/b (mitra: -)">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-alat-angkut">Alat Angkutan *</label>
+                      <input type="text" id="input-alat-angkut" class="form-input" value="Kendaraan Umum" aria-required="true">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="input-jabatan-instansi">Jabatan/ Instansi</label>
+                    <input type="text" id="input-jabatan-instansi" class="form-input" placeholder="Terisi otomatis dari jabatan">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="input-tingkat-biaya">Tingkat Biaya Perjalanan Dinas</label>
+                    <input type="text" id="input-tingkat-biaya" class="form-input" placeholder="Boleh dikosongkan">
+                  </div>
+                  <div class="anggaran-grid">
+                    <span class="anggaran-head">Pembebanan anggaran</span>
+                    <button type="button" id="btn-isi-anggaran" class="btn btn-outline btn-sm">
+                      <i class="bi bi-arrow-repeat"></i> Isi ulang dari kode akun
+                    </button>
+                    <div class="anggaran-row">
+                      <label class="form-label" for="input-program-kode">Program</label>
+                      <input type="text" id="input-program-kode" class="form-input kode-input" placeholder="GG" data-anggaran="program-kode">
+                      <label class="sr-only" for="input-program-uraian">Uraian program</label>
+                      <input type="text" id="input-program-uraian" class="form-input" placeholder="Uraian program" data-anggaran="program-uraian">
+                    </div>
+                    <div class="anggaran-row">
+                      <label class="form-label" for="input-kegiatan-kode">Kegiatan</label>
+                      <input type="text" id="input-kegiatan-kode" class="form-input kode-input" placeholder="2902" data-anggaran="kegiatan-kode">
+                      <label class="sr-only" for="input-kegiatan-uraian">Uraian kegiatan</label>
+                      <input type="text" id="input-kegiatan-uraian" class="form-input" placeholder="Uraian kegiatan" data-anggaran="kegiatan-uraian">
+                    </div>
+                    <div class="anggaran-row">
+                      <label class="form-label" for="input-komponen-kode">Komponen</label>
+                      <input type="text" id="input-komponen-kode" class="form-input kode-input" placeholder="530" data-anggaran="komponen-kode">
+                      <label class="sr-only" for="input-komponen-uraian">Uraian komponen</label>
+                      <input type="text" id="input-komponen-uraian" class="form-input" placeholder="Uraian komponen" data-anggaran="komponen-uraian">
+                    </div>
+                  </div>
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label" for="input-mata-anggaran">Mata Anggaran</label>
+                      <input type="text" id="input-mata-anggaran" class="form-input" placeholder="Boleh dikosongkan" data-anggaran="mata-anggaran">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-keterangan">Keterangan Lain-lain</label>
+                      <input type="text" id="input-keterangan" class="form-input" placeholder="Boleh dikosongkan">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Collapsible Advanced: Unit Kerja & PPK -->
               <div class="form-group">
                 <div class="accordion-header" id="accordion-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="accordion-content">
-                  <span><i class="bi bi-gear"></i> Pengaturan Lanjutan (Unit Kerja)</span>
+                  <span><i class="bi bi-gear"></i> Pengaturan Lanjutan (Unit Kerja &amp; PPK)</span>
                   <span id="accordion-indicator"><i class="bi bi-chevron-down"></i> Tampilkan</span>
                 </div>
                 <div class="accordion-content" id="accordion-content">
@@ -206,6 +285,26 @@
                     <label class="form-label" for="input-unit-kerja">Unit Kerja (Surat Pernyataan)</label>
                     <input type="text" id="input-unit-kerja" class="form-input" value="BPS Kabupaten Kepulauan Selayar">
                   </div>
+                  <fieldset class="ppk-fieldset">
+                    <legend class="form-label">Pejabat Pembuat Komitmen (PPK) &middot; Format 2</legend>
+                    <div class="form-group">
+                      <label class="form-label" for="select-ppk">Ambil dari daftar pegawai</label>
+                      <select id="select-ppk" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-nama">Nama PPK *</label>
+                      <input type="text" id="input-ppk-nama" class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-nip">NIP PPK *</label>
+                      <input type="text" id="input-ppk-nip" class="form-input" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-program">Program PPK *</label>
+                      <input type="text" id="input-ppk-program" class="form-input">
+                    </div>
+                    <div class="form-hint">Disimpan di peramban ini untuk pemakaian berikutnya.</div>
+                  </fieldset>
                 </div>
               </div>
 
@@ -239,6 +338,8 @@
                 <li><span>Petugas:</span> <strong id="sum-petugas">-</strong></li>
                 <li><span>Jabatan:</span> <strong id="sum-jabatan">-</strong></li>
                 <li><span>Tujuan:</span> <strong id="sum-tujuan">-</strong></li>
+                <li><span>Lama:</span> <strong id="sum-lama">-</strong></li>
+                <li><span>Format:</span> <strong id="sum-format">-</strong></li>
               </ul>
             </div>
           </div>
@@ -290,6 +391,7 @@
                       <th>Tanggal</th>
                       <th>Kecamatan</th>
                       <th>Petugas</th>
+                      <th>Format</th>
                       <th>Status</th>
                     </tr>
                   </thead>

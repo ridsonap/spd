@@ -48,6 +48,27 @@
     inputUraianBeban: $('input-uraian-beban'),
     inputTglSt: $('input-tgl-st'),
     inputUnitKerja: $('input-unit-kerja'),
+    radioFormat1: $('radio-format-1'),
+    radioFormat2: $('radio-format-2'),
+    f2Fields: $('f2-fields'),
+    inputTempatBerangkat: $('input-tempat-berangkat'),
+    inputGolongan: $('input-golongan'),
+    inputJabatanInstansi: $('input-jabatan-instansi'),
+    inputAlatAngkut: $('input-alat-angkut'),
+    inputTingkatBiaya: $('input-tingkat-biaya'),
+    inputProgramKode: $('input-program-kode'),
+    inputProgramUraian: $('input-program-uraian'),
+    inputKegiatanKode: $('input-kegiatan-kode'),
+    inputKegiatanUraian: $('input-kegiatan-uraian'),
+    inputKomponenKode: $('input-komponen-kode'),
+    inputKomponenUraian: $('input-komponen-uraian'),
+    inputMataAnggaran: $('input-mata-anggaran'),
+    inputKeterangan: $('input-keterangan'),
+    btnIsiAnggaran: $('btn-isi-anggaran'),
+    selectPpk: $('select-ppk'),
+    inputPpkNama: $('input-ppk-nama'),
+    inputPpkNip: $('input-ppk-nip'),
+    inputPpkProgram: $('input-ppk-program'),
     accordionToggle: $('accordion-toggle'),
     accordionContent: $('accordion-content'),
     accordionIndicator: $('accordion-indicator'),
@@ -62,6 +83,8 @@
     sumPetugas: $('sum-petugas'),
     sumJabatan: $('sum-jabatan'),
     sumTujuan: $('sum-tujuan'),
+    sumLama: $('sum-lama'),
+    sumFormat: $('sum-format'),
     formCard: $('form-card'),
     summaryCard: $('summary-card'),
     summaryToggle: $('summary-toggle'),
@@ -115,7 +138,44 @@
     tujuan: () => el.inputTujuan,
     pembebanan: () => el.inputPembebanan,
     uraianBeban: () => el.inputUraianBeban,
-    unitKerja: () => el.inputUnitKerja
+    unitKerja: () => el.inputUnitKerja,
+    format: () => el.radioFormat1,
+    tempatBerangkat: () => el.inputTempatBerangkat,
+    golongan: () => el.inputGolongan,
+    jabatanInstansi: () => el.inputJabatanInstansi,
+    alatAngkut: () => el.inputAlatAngkut,
+    tingkatBiaya: () => el.inputTingkatBiaya,
+    programKode: () => el.inputProgramKode,
+    programUraian: () => el.inputProgramUraian,
+    kegiatanKode: () => el.inputKegiatanKode,
+    kegiatanUraian: () => el.inputKegiatanUraian,
+    komponenKode: () => el.inputKomponenKode,
+    komponenUraian: () => el.inputKomponenUraian,
+    keterangan: () => el.inputKeterangan,
+    ppkNama: () => el.inputPpkNama,
+    ppkNip: () => el.inputPpkNip,
+    ppkProgram: () => el.inputPpkProgram
+  };
+
+  /**
+   * localStorage wrapper: storage can be unavailable (private mode, blocked site data).
+   */
+  const store = {
+    get(key, fallback) {
+      try {
+        const v = window.localStorage.getItem(`spd.${key}`);
+        return v === null ? fallback : JSON.parse(v);
+      } catch (e) {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      try {
+        window.localStorage.setItem(`spd.${key}`, JSON.stringify(value));
+      } catch (e) {
+        // ignore: preferences are a convenience only
+      }
+    }
   };
 
   // State
@@ -125,6 +185,8 @@
     batchRows: [],
     petugasMode: 'organik', // 'organik' | 'nonorganik'
     pegawaiSource: 'lokal',
+    format: 1,
+    pageCount: 3,
     showErrors: false,
     busy: false
   };
@@ -195,12 +257,30 @@
       el.selectPegawaiOrganik.appendChild(opt);
     });
 
+    populatePpkDropdown(list);
+
     if (el.pegawaiSource) {
       el.pegawaiSource.textContent = state.pegawaiSource === 'lokal'
         ? `Data pegawai: lokal (${list.length} orang)`
         : `Data pegawai: tersinkron ${state.pegawaiSource} (${list.length} orang)`;
     }
     updateOrganikBadge();
+  }
+
+  function populatePpkDropdown(list) {
+    if (!el.selectPpk) return;
+    el.selectPpk.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '\u2014 Pilih untuk mengisi otomatis \u2014';
+    el.selectPpk.appendChild(empty);
+    list.forEach((p, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = p.nama;
+      if (p.nip === el.inputPpkNip.value.trim()) opt.selected = true;
+      el.selectPpk.appendChild(opt);
+    });
   }
 
   function selectedPegawai() {
@@ -246,6 +326,14 @@
     };
   }
 
+  function currentPpk() {
+    return {
+      nama: el.inputPpkNama.value.trim(),
+      nip: el.inputPpkNip.value.replace(/\s+/g, ''),
+      program: el.inputPpkProgram.value.trim()
+    };
+  }
+
   /**
    * Raw builder input from the form
    */
@@ -254,8 +342,23 @@
     const sync = el.syncDatesCheckbox.checked;
     const tglMulai = sync ? tglSpd : el.tglMulai.value;
     const tglSelesai = sync ? tglSpd : el.tglSelesai.value;
-    return Object.assign(getCurrentPetugas(), {
-      format: 1,
+    const petugas = getCurrentPetugas();
+    return Object.assign(petugas, {
+      format: state.format,
+      golongan: el.inputGolongan.value || petugas.golongan,
+      jabatanInstansi: el.inputJabatanInstansi.value || petugas.jabatanInstansi,
+      tempatBerangkat: el.inputTempatBerangkat.value,
+      alatAngkut: el.inputAlatAngkut.value,
+      tingkatBiaya: el.inputTingkatBiaya.value,
+      programKode: el.inputProgramKode.value,
+      programUraian: el.inputProgramUraian.value,
+      kegiatanKode: el.inputKegiatanKode.value,
+      kegiatanUraian: el.inputKegiatanUraian.value,
+      komponenKode: el.inputKomponenKode.value,
+      komponenUraian: el.inputKomponenUraian.value,
+      mataAnggaran: el.inputMataAnggaran.value,
+      keterangan: el.inputKeterangan.value,
+      ppk: currentPpk(),
       noSurat: el.noSurat.value,
       tglSt: el.inputTglSt.value,
       tglSpd,
@@ -357,6 +460,11 @@
       : '-';
     el.sumJabatan.textContent = dash(data.petugas.jabatan);
     if (el.sumTujuan) el.sumTujuan.textContent = dash(data.tujuan);
+    if (el.sumLama) el.sumLama.textContent = data.lamaHari ? `${data.lamaHari} hari` : '-';
+    if (el.sumFormat) {
+      el.sumFormat.textContent = data.format === 2 ? 'Format 2 (halaman depan + lampiran, 4 hal)' : 'Format 1 (lampiran saja, 3 hal)';
+    }
+    el.sumKecamatan.textContent = `${dash(data.tempatBerangkat)} \u2192 ${dash(data.kecTujuan)}`;
     renderErrors(errors);
     return { data, errors };
   }
@@ -437,13 +545,16 @@
 
     if (el.btnDownloadTab) {
       const titles = {
-        merged: `Unduh Bundel (${state.pageCount || 3} Hal)`,
+        merged: `Unduh Bundel (${state.pageCount} Hal)`,
         st: 'Unduh Surat Tugas',
         spd: 'Unduh SPD',
         super: 'Unduh Surat Pernyataan'
       };
       el.btnDownloadTab.title = titles[tab] || 'Unduh';
     }
+
+    el.tabMerged.textContent = `Bundel (${state.pageCount} Hal)`;
+    el.tabSpd.textContent = state.pageCount === 4 ? 'SPD (2 Hal)' : 'SPD';
 
     const targetUrl = state.urls[tab];
     if (targetUrl) {
@@ -563,7 +674,11 @@
           return;
         }
 
-        const ctx = { pegawai: window.PEGAWAI_ORGANIK || [], ppk: Core.PPK_DEFAULT };
+        const ctx = {
+          pegawai: window.PEGAWAI_ORGANIK || [],
+          ppk: currentPpk(),
+          tempatBerangkatF2: el.inputTempatBerangkat.value.trim() || Core.DEFAULTS.tempatBerangkatF2
+        };
         state.batchRows = json.map((row, idx) => {
           const norm = Core.normalizeBatchRow(row, ctx);
           const built = Core.buildSpdData(norm.input);
@@ -609,6 +724,7 @@
         d.tglSpdIndo || '-',
         `${Core.shortTempat(d.tempatBerangkat) || '-'} → ${Core.shortTempat(d.kecTujuan) || '-'}`,
         d.petugas.nama || '-',
+        d.format === 2 ? '2' : (d.format === 1 ? '1' : '?'),
         d.petugas.isOrganik ? 'Organik' : 'Mitra'
       ];
       cells.forEach((c, i) => {
@@ -752,6 +868,74 @@
   }
 
   /**
+   * Switch Format SPD (1: lampiran saja, 2: halaman depan + lampiran)
+   */
+  function setFormat(format) {
+    state.format = format === 2 ? 2 : 1;
+    el.radioFormat1.checked = state.format === 1;
+    el.radioFormat2.checked = state.format === 2;
+    el.f2Fields.hidden = state.format !== 2;
+    store.set('format', state.format);
+    if (state.format === 2) {
+      fillPetugasF2();
+      fillAnggaran(false);
+    }
+    updateSummary();
+  }
+
+  /**
+   * Pangkat/golongan and jabatan/instansi follow the selected petugas.
+   */
+  function fillPetugasF2() {
+    const p = getCurrentPetugas();
+    if (p.isOrganik) {
+      el.inputGolongan.value = p.golongan || '';
+      el.inputJabatanInstansi.value = p.jabatanInstansi || p.jabatan || '';
+    } else if (el.inputGolongan.dataset.for !== 'mitra') {
+      el.inputGolongan.value = Core.DEFAULTS.golonganMitra;
+      el.inputJabatanInstansi.value = '';
+    }
+    el.inputGolongan.dataset.for = p.isOrganik ? 'organik' : 'mitra';
+    el.inputJabatanInstansi.placeholder = p.isOrganik ? 'Terisi otomatis dari data pegawai' : 'Kosongkan untuk memakai jabatan';
+  }
+
+  /**
+   * Fill Program/Kegiatan/Komponen and Mata anggaran from the kode akun.
+   * Fields edited by hand are kept unless `force` is true.
+   */
+  function fillAnggaran(force) {
+    const auto = Core.anggaranDariPembebanan(el.inputPembebanan.value);
+    const values = {
+      'program-kode': auto ? auto.program.kode : '',
+      'program-uraian': auto ? auto.program.uraian : '',
+      'kegiatan-kode': auto ? auto.kegiatan.kode : '',
+      'kegiatan-uraian': auto ? auto.kegiatan.uraian : '',
+      'komponen-kode': auto ? auto.komponen.kode : '',
+      'komponen-uraian': auto ? auto.komponen.uraian : '',
+      'mata-anggaran': auto ? auto.mataAnggaran : ''
+    };
+    document.querySelectorAll('[data-anggaran]').forEach((input) => {
+      if (force) delete input.dataset.manual;
+      if (input.dataset.manual === '1') return;
+      input.value = values[input.dataset.anggaran];
+    });
+    if (force && !auto) showToast('Kode akun tidak dikenali. Isi Program/Kegiatan/Komponen secara manual.', true);
+    updateSummary();
+  }
+
+  function savePpk() {
+    store.set('ppk', currentPpk());
+  }
+
+  function loadPreferences() {
+    const ppk = Object.assign({}, Core.PPK_DEFAULT, store.get('ppk', {}));
+    el.inputPpkNama.value = ppk.nama || '';
+    el.inputPpkNip.value = ppk.nip || '';
+    el.inputPpkProgram.value = ppk.program || '';
+    setFormat(store.get('format', Core.DEFAULTS.format));
+  }
+
+  /**
    * Initialize event handlers
    */
   function initListeners() {
@@ -779,6 +963,7 @@
         el.containerOrganik.style.display = 'block';
         el.containerNonorganik.style.display = 'none';
         updateOrganikBadge();
+        fillPetugasF2();
         updateSummary();
       }
     });
@@ -790,13 +975,53 @@
         el.labelPetugasOrganik.classList.remove('active');
         el.containerOrganik.style.display = 'none';
         el.containerNonorganik.style.display = 'block';
+        fillPetugasF2();
         updateSummary();
       }
     });
 
     el.selectPegawaiOrganik.addEventListener('change', () => {
       updateOrganikBadge();
+      fillPetugasF2();
       updateSummary();
+    });
+
+    // Format SPD
+    [el.radioFormat1, el.radioFormat2].forEach((radio) => {
+      radio.addEventListener('change', () => {
+        if (radio.checked) setFormat(parseInt(radio.value, 10));
+      });
+    });
+
+    // Anggaran: auto-fill from kode akun until the user edits a field by hand
+    el.inputPembebanan.addEventListener('input', () => fillAnggaran(false));
+    document.querySelectorAll('[data-anggaran]').forEach((input) => {
+      input.addEventListener('input', () => {
+        input.dataset.manual = '1';
+        updateSummary();
+      });
+    });
+    el.btnIsiAnggaran.addEventListener('click', () => fillAnggaran(true));
+
+    // PPK
+    el.selectPpk.addEventListener('change', () => {
+      const p = (window.PEGAWAI_ORGANIK || [])[parseInt(el.selectPpk.value, 10)];
+      if (!p) return;
+      el.inputPpkNama.value = p.nama;
+      el.inputPpkNip.value = p.nip;
+      savePpk();
+      updateSummary();
+    });
+    [el.inputPpkNama, el.inputPpkNip, el.inputPpkProgram].forEach((input) => {
+      input.addEventListener('input', () => {
+        savePpk();
+        updateSummary();
+      });
+    });
+
+    [el.inputTempatBerangkat, el.inputGolongan, el.inputJabatanInstansi, el.inputAlatAngkut,
+      el.inputTingkatBiaya, el.inputKeterangan].forEach((input) => {
+      input.addEventListener('input', updateSummary);
     });
 
     // Kecamatan change: auto update tujuan text if it ends with "di Kecamatan X"
@@ -937,6 +1162,7 @@
 
   // Init
   function init() {
+    loadPreferences();
     populatePegawaiDropdown();
     updateSummary();
     initListeners();
