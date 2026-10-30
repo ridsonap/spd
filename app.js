@@ -53,6 +53,7 @@
     sumKecamatan: document.getElementById('sum-kecamatan'),
     sumPetugas: document.getElementById('sum-petugas'),
     sumJabatan: document.getElementById('sum-jabatan'),
+    sumTujuan: document.getElementById('sum-tujuan'),
 
     // Single Actions
     btnGenerate: document.getElementById('btn-generate'),
@@ -166,23 +167,29 @@
 
   /**
    * Wrap text into multiple lines for Surat Tugas tujuan field
+   * Respects manual linebreaks and wraps long lines
    */
   function wrapText(text, maxChars = 52) {
     text = (text || '').trim();
     if (!text) return [''];
-    const words = text.split(/\s+/);
+    const rawParagraphs = text.split(/\r?\n/);
     const lines = [];
-    let currentLine = '';
-    for (const w of words) {
-      if ((currentLine ? currentLine + ' ' + w : w).length <= maxChars) {
-        currentLine = currentLine ? currentLine + ' ' + w : w;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = w;
+    for (const para of rawParagraphs) {
+      const p = para.trim();
+      if (!p) continue;
+      const words = p.split(/\s+/);
+      let currentLine = '';
+      for (const w of words) {
+        if ((currentLine ? currentLine + ' ' + w : w).length <= maxChars) {
+          currentLine = currentLine ? currentLine + ' ' + w : w;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = w;
+        }
       }
+      if (currentLine) lines.push(currentLine);
     }
-    if (currentLine) lines.push(currentLine);
-    return lines;
+    return lines.length > 0 ? lines : [''];
   }
 
   /**
@@ -364,6 +371,7 @@
     el.sumKecamatan.textContent = kec;
     el.sumPetugas.textContent = `${petugas.nama} (${petugas.nip}) [${petugas.isOrganik ? 'Organik' : 'Mitra'}]`;
     el.sumJabatan.textContent = petugas.jabatan;
+    if (el.sumTujuan) el.sumTujuan.textContent = el.inputTujuan.value || '-';
   }
 
   /**
@@ -388,9 +396,19 @@
     text = text.replace(/Petugas Lapangan Sensus \\\([^\)]*\\\)/, escapePdfText(opts.jabatan || 'Petugas Lapangan Sensus (PPL Sensus)'));
 
     // 4. Dynamic Middle Block: Tujuan, Waktu, Pembebanan
-    const middleRegex = /BT 58\.943 499\\.179 Td \/F1 12\.0 Tf  \[\(Tujuan\/Tugas\)\] TJ ET[\s\S]*?BT 222\.443 433\.155 Td \/F1 12\.0 Tf  \[\(Transport Daerah Sulit\)\] TJ ET/;
+    const startMarker = 'BT 58.943 499.179 Td /F1 12.0 Tf  [(Tujuan/Tugas)] TJ ET';
+    const endMarker = 'BT 222.443 433.155 Td /F1 12.0 Tf  [(Transport Daerah Sulit)] TJ ET';
+    const startIdx = text.indexOf(startMarker);
+    const endIdx = text.indexOf(endMarker);
     const newMiddle = buildMiddleBlockST(opts);
-    text = text.replace(middleRegex, newMiddle);
+
+    if (startIdx !== -1 && endIdx !== -1) {
+      text = text.substring(0, startIdx) + newMiddle + text.substring(endIdx + endMarker.length);
+    } else {
+      // Fallback regex in case of slight whitespace variance
+      const middleRegex = /BT 58\.943 499\.179 Td[\s\S]*?BT 222\.443 433\.155 Td \/F1 12\.0 Tf  \[\(Transport Daerah Sulit\)\] TJ ET/;
+      text = text.replace(middleRegex, newMiddle);
+    }
 
     // 5. Tanggal TTD ST
     if (opts.tglSt) {
@@ -701,9 +719,24 @@
         // Normalize keys
         state.batchData = json.map((row, idx) => {
           const getVal = (patterns) => {
-            for (const key of Object.keys(row)) {
-              for (const p of patterns) {
-                if (key.toLowerCase().includes(p.toLowerCase())) {
+            // Pass 1: Exact match (case-insensitive)
+            for (const p of patterns) {
+              const pLower = p.toLowerCase().trim();
+              for (const key of Object.keys(row)) {
+                if (key.toLowerCase().trim() === pLower) {
+                  return row[key];
+                }
+              }
+            }
+            // Pass 2: Substring match with safety against 'petugas' matching 'tugas'
+            for (const p of patterns) {
+              const pLower = p.toLowerCase().trim();
+              for (const key of Object.keys(row)) {
+                const kLower = key.toLowerCase().trim();
+                if (pLower === 'tugas' && kLower.includes('petugas')) {
+                  continue;
+                }
+                if (kLower.includes(pLower)) {
                   return row[key];
                 }
               }
@@ -718,7 +751,7 @@
           const tglMulai = parseExcelDate(getVal(['tanggal mulai', 'tgl mulai', 'mulai'])) || tglSpd;
           const tglSelesai = parseExcelDate(getVal(['tanggal selesai', 'tgl selesai', 'selesai'])) || tglMulai;
           
-          let nama = String(getVal(['nama petugas', 'nama', 'petugas']) || '').trim();
+          let nama = String(getVal(['nama petugas', 'nama pegawai', 'nama lengkap', 'nama', 'petugas']) || '').trim();
           let nip = String(getVal(['nip', 'nik']) || '').trim();
           let jabatan = String(getVal(['jabatan']) || '').trim();
           let kategori = String(getVal(['kategori', 'status']) || '').trim().toLowerCase();
@@ -738,7 +771,7 @@
           if (!nip) nip = '7301034811760004';
           if (!jabatan) jabatan = isOrganik ? 'Statistisi Ahli Pertama' : 'Mitra Sensus/Survei';
 
-          const tujuan = getVal(['tujuan', 'tugas']) || `Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan ${kecamatan}`;
+          const tujuan = getVal(['tujuan', 'uraian tugas', 'tugas perjalanan', 'kegiatan', 'maksud']) || `Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan ${kecamatan}`;
           const pembebanan = getVal(['pembebanan akun', 'pembebanan', 'akun']) || 'GG 2902 BMA 006 530 B 524113 2';
           const uraianBeban = getVal(['uraian pembebanan', 'uraian beban', 'uraian']) || 'Transport Daerah Sulit';
 
