@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --test test/ && node scripts/build-templates.js --check",
     "smoke": "node scripts/smoke.js",
-    "build:templates": "node scripts/build-templates.js"
+    "build:templates": "node scripts/build-templates.js",
+    "update:pegawai": "node scripts/update-pegawai.js"
   },
   "keywords": [],
   "author": "",

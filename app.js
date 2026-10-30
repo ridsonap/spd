@@ -79,6 +79,8 @@
     inputPpkNama: $('input-ppk-nama'),
     inputPpkNip: $('input-ppk-nip'),
     inputPpkProgram: $('input-ppk-program'),
+    ppkStatus: $('ppk-status'),
+    btnPpkDefault: $('btn-ppk-default'),
     accordionToggle: $('accordion-toggle'),
     accordionContent: $('accordion-content'),
     accordionIndicator: $('accordion-indicator'),
@@ -197,6 +199,13 @@
       } catch (e) {
         // ignore: preferences are a convenience only
       }
+    },
+    remove(key) {
+      try {
+        window.localStorage.removeItem(`spd.${key}`);
+      } catch (e) {
+        // ignore
+      }
     }
   };
 
@@ -216,6 +225,8 @@
     batchRows: [],
     petugasMode: 'organik', // 'organik' | 'nonorganik'
     pegawaiSource: 'lokal',
+    pegawaiWarnings: [], // rows of the sheet that need fixing
+    syncError: '',
     format: 1,
     pageCount: 3,
     step: 1,
@@ -295,10 +306,35 @@
 
     populatePpkDropdown(list);
 
-    el.pegawaiSource.textContent = state.pegawaiSource === 'lokal'
-      ? `Data pegawai: lokal (${list.length} orang)`
-      : `Data pegawai: tersinkron ${state.pegawaiSource} (${list.length} orang)`;
+    renderPegawaiSource(list.length);
     updateOrganikBadge();
+  }
+
+  /**
+   * "Data pegawai: ..." line under the dropdown, with the sheet rows that need fixing.
+   */
+  function renderPegawaiSource(count) {
+    const box = el.pegawaiSource;
+    box.textContent = state.pegawaiSource === 'lokal'
+      ? `Data pegawai: lokal (${count} orang)`
+      : `Data pegawai: tersinkron ${state.pegawaiSource} (${count} orang)`;
+    box.classList.toggle('is-warning', Boolean(state.syncError || state.pegawaiWarnings.length));
+    if (state.syncError) {
+      box.append(` · Google Sheet tidak dipakai: ${state.syncError}`);
+    }
+    if (state.pegawaiWarnings.length) {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = `${state.pegawaiWarnings.length} baris di Google Sheet perlu dilengkapi`;
+      const ul = document.createElement('ul');
+      state.pegawaiWarnings.forEach((w) => {
+        const li = document.createElement('li');
+        li.textContent = w;
+        ul.appendChild(li);
+      });
+      details.append(summary, ul);
+      box.appendChild(details);
+    }
   }
 
   function populatePpkDropdown(list) {
@@ -832,15 +868,38 @@
     updateSummary();
   }
 
+  /**
+   * Only the fields that differ from Core.PPK_DEFAULT are stored, so a browser that never
+   * changed the PPK follows a new default when it is updated in core.js.
+   */
   function savePpk() {
-    store.set('ppk', currentPpk());
+    const overrides = Core.ppkOverrides(currentPpk());
+    if (Object.keys(overrides).length) store.set('ppk', overrides);
+    else store.remove('ppk');
+    renderPpkStatus(overrides);
   }
 
-  function loadPreferences() {
-    const ppk = Object.assign({}, Core.PPK_DEFAULT, store.get('ppk', {}));
+  function renderPpkStatus(overrides) {
+    const custom = Object.keys(overrides).length > 0;
+    el.ppkStatus.textContent = custom
+      ? 'PPK diubah dan disimpan di peramban ini.'
+      : 'Memakai PPK default.';
+    el.btnPpkDefault.hidden = !custom;
+  }
+
+  function fillPpk(ppk) {
     el.inputPpkNama.value = ppk.nama || '';
     el.inputPpkNip.value = ppk.nip || '';
     el.inputPpkProgram.value = ppk.program || '';
+  }
+
+  function loadPreferences() {
+    const overrides = Core.ppkOverrides(store.get('ppk', {}));
+    fillPpk(Core.resolvePpk(overrides));
+    // Rewrite what the previous version stored (the full PPK) as overrides only.
+    if (Object.keys(overrides).length) store.set('ppk', overrides);
+    else store.remove('ppk');
+    renderPpkStatus(overrides);
     const last = store.get('terakhir', {});
     el.inputKodeKlasifikasi.value = Core.KODE_KLASIFIKASI_DEFAULT;
     Object.entries(REMEMBERED).forEach(([key, getter]) => {
@@ -1159,27 +1218,26 @@
   }
 
   /**
-   * Try background sync with Google Sheet. The local pegawai.js list is replaced only
-   * when the sheet parses completely (nama, NIP, golongan, pangkat).
+   * Try background sync with Google Sheet. Valid rows replace the local pegawai.js list;
+   * rows that need fixing are listed under the dropdown. When nothing usable comes back
+   * (offline, sheet moved, header renamed) pegawai.js stays and the reason is shown.
    */
   async function trySyncGoogleSheet() {
     try {
-      const url = 'https://docs.google.com/spreadsheets/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/export?format=csv&gid=2128965247';
-      const res = await fetch(url);
-      if (!res.ok) return;
+      const res = await fetch(Core.PEGAWAI_SHEET_CSV_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = Core.parsePegawaiCsv(await res.text());
-      if (!result.complete) {
-        console.warn('Sinkronisasi pegawai dilewati:', result.reason);
-        return;
-      }
+      if (!result.pegawai.length) throw new Error(result.reason);
       window.PEGAWAI_ORGANIK = result.pegawai;
+      state.pegawaiWarnings = result.warnings;
+      state.syncError = '';
       const now = new Date();
       state.pegawaiSource = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      populatePegawaiDropdown();
-      updateSummary();
     } catch (e) {
-      // Offline or CORS protected, seamlessly rely on pegawai.js
+      state.syncError = e instanceof TypeError ? 'tidak bisa terhubung' : e.message;
     }
+    populatePegawaiDropdown();
+    updateSummary();
   }
 
   // ---------------------------------------------------------------------------
@@ -1275,6 +1333,12 @@
     });
     [el.inputPpkNama, el.inputPpkNip, el.inputPpkProgram].forEach((input) => {
       input.addEventListener('input', savePpk);
+    });
+    el.btnPpkDefault.addEventListener('click', () => {
+      fillPpk(Core.PPK_DEFAULT);
+      el.selectPpk.value = '';
+      savePpk();
+      updateSummary();
     });
 
     // Kecamatan change: auto update tujuan text if it ends with "di Kecamatan X"

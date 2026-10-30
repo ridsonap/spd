@@ -46,6 +46,38 @@
   }
 
   /**
+   * Replace a 12pt template text and keep it centred on the old text. `x`, `y` and the
+   * underline coordinates are strings exactly as written in the template; an optional
+   * underline keeps its overhang past the text.
+   */
+  function swapCentred(text, font, o) {
+    const x0 = parseFloat(o.x);
+    const wOld = font.widthOfTextAtSize(o.old, 12);
+    const wNew = font.widthOfTextAtSize(o.value, 12);
+    const x = x0 + wOld / 2 - wNew / 2;
+    text = replaceStrict(text, `BT ${o.x} ${o.y} Td /${o.font} 12.0 Tf  [(${o.old})] TJ ET`,
+      `BT ${fmt(x)} ${o.y} Td /${o.font} 12.0 Tf  [(${escapePdfText(o.value)})] TJ ET`, o.label);
+    if (o.line) {
+      const end = x + (parseFloat(o.line.end) - x0) - wOld + wNew;
+      text = replaceStrict(text, `${o.x} ${o.line.y} m ${o.line.end} ${o.line.y} l S`,
+        `${fmt(x)} ${o.line.y} m ${fmt(end)} ${o.line.y} l S`, `${o.label} (garis bawah)`);
+    }
+    return text;
+  }
+
+  // Standard font metrics for measuring text in templates that are not drawn with pdf-lib.
+  let metricsPromise = null;
+  function metricFonts() {
+    if (!metricsPromise) {
+      metricsPromise = PDFDocument.create().then(async (doc) => ({
+        regular: await doc.embedFont(StandardFonts.TimesRoman),
+        bold: await doc.embedFont(StandardFonts.TimesRomanBold)
+      }));
+    }
+    return metricsPromise;
+  }
+
+  /**
    * Replace a text block between two markers (inclusive). Throws when either is missing.
    */
   function replaceBlock(text, startMarker, endMarker, repl, label) {
@@ -134,6 +166,17 @@
     // 5. Tanggal TTD ST
     text = replaceStrict(text, 'Kepulauan Selayar, 15 Juni 2026', `Kepulauan Selayar, ${data.tglStIndo}`, 'ST tanggal TTD');
 
+    // 6. Kepala BPS (name and NIP centred on the template position)
+    const { regular } = await metricFonts();
+    text = swapCentred(text, regular, {
+      x: '392.806', y: '245.468', font: 'F1', old: 'Muhammad Nur,S.Sos', value: data.kepala.nama,
+      line: { y: '242.888', end: '502.474' }, label: 'ST nama Kepala BPS'
+    });
+    text = swapCentred(text, regular, {
+      x: '380.974', y: '227.607', font: 'F1', old: 'NIP. 197501281998031002', value: `NIP. ${data.kepala.nip}`,
+      label: 'ST NIP Kepala BPS'
+    });
+
     writeStream(doc, page, text, warnings);
     return doc;
   }
@@ -146,7 +189,7 @@
    * Replace nomor, section I/II places and dates, and re-centre the Kepala BPS block.
    * `asal` is the departure place (Format 1: kecamatan asal, Format 2: tempat kedudukan).
    */
-  function applyLampiranReplacements(text, data, asal, bold) {
+  function applyLampiranReplacements(text, data, asal, fonts) {
     const kecTujuan = data.kecTujuan;
     const tglBerangkat = data.tglMulaiIndo;
     const tglPulang = data.tglSelesaiIndo;
@@ -175,17 +218,15 @@
     // 8. Kolom II (Kanan): Pada Tanggal (pulang)
     text = swap('BT 406.107 557.555 Td /F1 12.0 Tf  [(20 Juli 2026)] TJ ET', tglPulang, 'SPD II tanggal pulang');
 
-    // 9. Kepala BPS (name centred on the template position, underline follows the width)
-    const tplName = 'Muhammad Nur,S.Sos';
-    const nameX = 374.156;
-    const lineEnd = 491.168;
-    const wOld = bold.widthOfTextAtSize(tplName, 12);
-    const wNew = bold.widthOfTextAtSize(data.kepala.nama, 12);
-    const newX = nameX + wOld / 2 - wNew / 2;
-    text = replaceStrict(text, `BT 374.156 621.934 Td /F2 12.0 Tf  [(${tplName})] TJ ET`,
-      `BT ${fmt(newX)} 621.934 Td /F2 12.0 Tf  [(${escapePdfText(data.kepala.nama)})] TJ ET`, 'SPD nama Kepala BPS');
-    text = replaceStrict(text, '374.156 619.354 m 491.168 619.354 l S',
-      `${fmt(newX)} 619.354 m ${fmt(newX + (lineEnd - nameX) - wOld + wNew)} 619.354 l S`, 'SPD garis nama Kepala BPS');
+    // 9. Kepala BPS (name and NIP centred on the template position)
+    text = swapCentred(text, fonts.bold, {
+      x: '374.156', y: '621.934', font: 'F2', old: 'Muhammad Nur,S.Sos', value: data.kepala.nama,
+      line: { y: '619.354', end: '491.168' }, label: 'SPD nama Kepala BPS'
+    });
+    text = swapCentred(text, fonts.regular, {
+      x: '366.662', y: '605.573', font: 'F1', old: 'Nip. 197501281998031002', value: `Nip. ${data.kepala.nip}`,
+      label: 'SPD NIP Kepala BPS'
+    });
     return text;
   }
 
@@ -209,7 +250,7 @@
     assertValid(data);
     const { doc, page, text } = await openTemplate(spdBytes);
     const fonts = await lampiranFonts(doc);
-    writeStream(doc, page, applyLampiranReplacements(text, data, data.kecAsal, fonts.bold), warnings);
+    writeStream(doc, page, applyLampiranReplacements(text, data, data.kecAsal, fonts), warnings);
     return doc;
   }
 
@@ -288,7 +329,7 @@
     const { doc, page, text: src } = await openTemplate(spdBytes);
     const fonts = await lampiranFonts(doc);
     assertFits(fonts.regular, data.tempatBerangkat, 566.934 - 1.5 - 406.107, 'Berangkat dari');
-    let text = applyLampiranReplacements(src, data, data.tempatBerangkat, fonts.bold);
+    let text = applyLampiranReplacements(src, data, data.tempatBerangkat, fonts);
     text = replaceBlock(
       text,
       'BT 29.096 482.525 Td /F1 12.0 Tf  [(CATATAN LAIN - LAIN)] TJ ET',

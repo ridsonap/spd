@@ -100,3 +100,27 @@ test('lampiran Format 2: bagian III terisi, CATATAN digeser', async () => {
   assert.strictEqual((t.match(/Kabupaten Kepulauan Selayar/g) || []).length, 4);
   assert.ok(!t.includes('Kecamatan Benteng'));
 });
+
+test('Kepala BPS di ST dan lampiran mengikuti data.kepala (nama dan NIP), posisinya tetap di tengah', async () => {
+  const data = build({ format: 1 });
+  data.kepala = Object.assign({}, data.kepala, { nama: 'Andi Pengganti, S.ST., M.Si.', nip: '198001012005011001' });
+  const bundle = await Render.buildBundle(data, templates);
+  const st = rawStream(bundle.st);
+  const lampiran = rawStream(bundle.spd);
+  for (const s of [st, lampiran]) {
+    assert.ok(!s.includes('Muhammad Nur'), 'nama Kepala lama tidak boleh tercetak');
+    assert.ok(!s.includes('197501281998031002'), 'NIP Kepala lama tidak boleh tercetak');
+    assert.ok(s.includes('(Andi Pengganti, S.ST., M.Si.)'));
+  }
+  assert.ok(st.includes('(NIP. 198001012005011001)'));
+  assert.ok(lampiran.includes('(Nip. 198001012005011001)'));
+
+  // Centred on the template centre of the name (x 392.806 + 109.188 / 2).
+  const { PDFDocument, StandardFonts } = require('../vendor/pdf-lib.min.js');
+  const roman = await (await PDFDocument.create()).embedFont(StandardFonts.TimesRoman);
+  const x = +st.match(/BT ([\d.]+) 245\.468 Td/)[1];
+  const w = roman.widthOfTextAtSize('Andi Pengganti, S.ST., M.Si.', 12);
+  assert.ok(Math.abs(x + w / 2 - 447.4) < 0.01, `nama tidak di tengah: x=${x}`);
+  const [, x1, x2] = st.match(/([\d.]+) 242\.888 m ([\d.]+) 242\.888 l S/);
+  assert.ok(Math.abs((+x2 - +x1) - (w + 0.48)) < 0.01, 'garis bawah mengikuti lebar nama');
+});

@@ -1,6 +1,7 @@
 /**
  * Database Pegawai BPS Kabupaten Kepulauan Selayar
  * Sumber: https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247
+ * Dibuat oleh scripts/update-pegawai.js (npm run update:pegawai), jangan diedit manual.
  */
 
 window.PEGAWAI_ORGANIK = [
@@ -165,7 +166,7 @@ window.PEGAWAI_ORGANIK = [
     pangkat: "Penata Muda"
   },
   {
-    nama: "Nur Amalina Fauzi, S.Tr.Stat.",
+    nama: "Nur Amalina Fauzi S.Tr.Stat.",
     nip: "200106022023102003",
     jabatan: "Statistisi Ahli Pertama",
     jabatanInstansi: "Statistisi Ahli Pertama BPS Kabupaten/Kota",
@@ -181,7 +182,7 @@ window.PEGAWAI_ORGANIK = [
     pangkat: "Pengatur"
   },
   {
-    nama: "Arie Purnama, S.IP.",
+    nama: "Arie Purnama S.IP.",
     nip: "199510312025211029",
     jabatan: "Penata Layanan Operasional",
     jabatanInstansi: "Penata Layanan Operasional",
@@ -189,7 +190,7 @@ window.PEGAWAI_ORGANIK = [
     pangkat: ""
   },
   {
-    nama: "Apri Wijaya, S.T.",
+    nama: "Apri Wijaya S.T.",
     nip: "199104012025211050",
     jabatan: "Penata Layanan Operasional",
     jabatanInstansi: "Penata Layanan Operasional",

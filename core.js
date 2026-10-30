@@ -24,8 +24,9 @@
     tempatKedudukan: 'Kabupaten Kepulauan Selayar'
   };
 
-  // Kepala BPS printed on SPD lampiran (both formats). Matches the template text
-  // so Format 1 output stays byte-identical.
+  // Kepala BPS signing the Surat Tugas and the SPD lampiran (both formats). Name and NIP
+  // match the template text so output stays byte-identical; change them here when the
+  // Kepala changes. The QR TTE on the Surat Tugas template is not regenerated.
   const KEPALA_BPS = {
     nama: 'Muhammad Nur,S.Sos',
     nip: '197501281998031002',
@@ -37,6 +38,9 @@
     nip: '199801112021041001',
     program: 'Program Penyediaan dan Pelayanan Informasi Statistik'
   };
+
+  // CSV export of the pegawai sheet, read by the app on load and by scripts/update-pegawai.js.
+  const PEGAWAI_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/export?format=csv&gid=2128965247';
 
   // Kode klasifikasi used by the ST template; the form remembers the last one used.
   const KODE_KLASIFIKASI_DEFAULT = '7301/SS.330';
@@ -514,9 +518,9 @@
 
   /**
    * Parse the pegawai Google Sheet export by header names.
-   * Returns { pegawai, complete, reason }. `complete` is true only when the header was
-   * found, at least one row was read and every row has nama, NIP (18 digit), golongan
-   * and pangkat (pangkat may be empty for PPPK).
+   * Returns { pegawai, warnings, complete, reason }. A row needs nama, an 18-digit NIP and
+   * jabatan to be used; a missing golongan/pangkat only adds a warning (golongan can be
+   * typed in the form, pangkat is not printed). `complete` is true when there is no warning.
    */
   function parsePegawaiCsv(text) {
     const rows = parseCsv(text);
@@ -531,12 +535,12 @@
         col = { nama, nip, golongan: h.indexOf('golongan'), pangkat: h.indexOf('pangkat'), jabatan: h.indexOf('jabatan') };
       }
     }
-    if (headerIdx < 0) return { pegawai: [], complete: false, reason: 'Header "Nama" dan "NIP Baru" tidak ditemukan' };
+    if (headerIdx < 0) return { pegawai: [], warnings: [], complete: false, reason: 'Header "Nama" dan "NIP Baru" tidak ditemukan' };
     const missing = ['golongan', 'pangkat', 'jabatan'].filter(k => col[k] < 0);
-    if (missing.length) return { pegawai: [], complete: false, reason: `Kolom tidak ditemukan: ${missing.join(', ')}` };
+    if (missing.length) return { pegawai: [], warnings: [], complete: false, reason: `Kolom tidak ditemukan: ${missing.join(', ')}` };
 
     const pegawai = [];
-    let incomplete = 0;
+    const warnings = [];
     for (const r of rows.slice(headerIdx + 1)) {
       const get = (k) => String(r[col[k]] || '').replace(/\s+/g, ' ').trim();
       const nip = get('nip').replace(/\D/g, '');
@@ -546,7 +550,14 @@
       const pangkat = get('pangkat');
       if (!golongan && isNipPppk(nip)) golongan = 'PPPK';
       const jabatanRaw = get('jabatan');
-      if (!golongan || (!pangkat && golongan !== 'PPPK') || !jabatanRaw) incomplete++;
+      if (!jabatanRaw) {
+        warnings.push(`${nama}: dilewati, jabatan kosong`);
+        continue;
+      }
+      const kosong = [];
+      if (!golongan) kosong.push('golongan');
+      if (!pangkat && golongan !== 'PPPK') kosong.push('pangkat');
+      if (kosong.length) warnings.push(`${nama}: ${kosong.join(', ')} kosong`);
       pegawai.push({
         nama,
         nip,
@@ -556,9 +567,23 @@
         pangkat
       });
     }
-    if (pegawai.length === 0) return { pegawai, complete: false, reason: 'Tidak ada baris pegawai yang valid' };
-    if (incomplete > 0) return { pegawai, complete: false, reason: `${incomplete} baris tidak lengkap` };
-    return { pegawai, complete: true, reason: '' };
+    if (pegawai.length === 0) return { pegawai, warnings, complete: false, reason: 'Tidak ada baris pegawai yang valid' };
+    return { pegawai, warnings, complete: warnings.length === 0, reason: warnings.length ? `${warnings.length} baris bermasalah` : '' };
+  }
+
+  /** Fields of `ppk` that differ from the default; only these are stored in the browser. */
+  function ppkOverrides(ppk, def = PPK_DEFAULT) {
+    const out = {};
+    for (const k of Object.keys(def)) {
+      const v = str(ppk && ppk[k]);
+      if (v && v !== def[k]) out[k] = v;
+    }
+    return out;
+  }
+
+  /** Default PPK with the stored overrides applied. */
+  function resolvePpk(overrides, def = PPK_DEFAULT) {
+    return Object.assign({}, def, ppkOverrides(overrides, def));
   }
 
   // ---------------------------------------------------------------------------
@@ -888,6 +913,7 @@
     KANTOR,
     KEPALA_BPS,
     PPK_DEFAULT,
+    PEGAWAI_SHEET_CSV_URL,
     KODE_KLASIFIKASI_DEFAULT,
     DEFAULTS,
     KECAMATAN,
@@ -921,6 +947,8 @@
     anggaranDariPembebanan,
     parseCsv,
     parsePegawaiCsv,
+    ppkOverrides,
+    resolvePpk,
     isNipPppk,
     parseFormat,
     validateSpdInput,

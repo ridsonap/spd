@@ -229,3 +229,43 @@ test('susunNomor: nomor urut + kode klasifikasi + tahun', () => {
   assert.strictEqual(Core.isNomorLengkap(Core.susunNomor('11', '', '2026')), false);
   assert.strictEqual(Core.KODE_KLASIFIKASI_DEFAULT, '7301/SS.330');
 });
+
+test('parsePegawaiCsv: satu baris tidak lengkap tidak menggagalkan pegawai lain', () => {
+  const csv = [
+    'Nama,NIP Baru,Golongan,Pangkat,Jabatan',
+    'Takdir,198704262011011006,III/d,Penata Tingkat 1,Kepala Subbagian Umum',
+    'Pegawai Baru,199001012015011001,,,Statistisi Ahli Pertama BPS Kabupaten/Kota',
+    'Tanpa Jabatan,199202022016022002,III/a,Penata Muda,'
+  ].join('\n');
+  const r = Core.parsePegawaiCsv(csv);
+  assert.strictEqual(r.complete, false);
+  // Missing golongan/pangkat: still selectable (the form lets golongan be typed);
+  // missing jabatan: skipped because the Surat Tugas needs it.
+  assert.deepStrictEqual(r.pegawai.map(p => p.nama), ['Takdir', 'Pegawai Baru']);
+  assert.deepStrictEqual(r.warnings, [
+    'Pegawai Baru: golongan, pangkat kosong',
+    'Tanpa Jabatan: dilewati, jabatan kosong'
+  ]);
+  assert.deepStrictEqual(Core.parsePegawaiCsv('Nama,NIP Baru,Golongan,Pangkat,Jabatan\nTakdir,198704262011011006,III/d,Penata Tingkat 1,Staf').warnings, []);
+});
+
+test('PPK: hanya isian yang berbeda dari default yang disimpan', () => {
+  const def = { nama: 'PPK Lama', nip: '199801112021041001', program: 'Program A' };
+  assert.deepStrictEqual(Core.ppkOverrides({ nama: 'PPK Lama', nip: '199801112021041001', program: 'Program A' }, def), {});
+  assert.deepStrictEqual(Core.ppkOverrides({ nama: ' PPK Lain ', nip: '199801112021041001', program: 'Program A' }, def), { nama: 'PPK Lain' });
+  // A browser that never customised the PPK follows a new default from the code.
+  const baru = { nama: 'PPK Baru', nip: '199001012015011001', program: 'Program A' };
+  assert.deepStrictEqual(Core.resolvePpk(Core.ppkOverrides(def, def), baru), baru);
+  assert.deepStrictEqual(Core.resolvePpk({ program: 'Program B' }, baru), Object.assign({}, baru, { program: 'Program B' }));
+  assert.deepStrictEqual(Core.resolvePpk(null, baru), baru);
+});
+
+test('update-pegawai: pegawai.js yang ditulis terbaca kembali sama persis', () => {
+  const vm = require('vm');
+  const { renderPegawaiJs } = require('../scripts/update-pegawai.js');
+  const csv = fs.readFileSync(path.join(__dirname, 'fixtures', 'pegawai-sheet.csv'), 'utf8');
+  const { pegawai } = Core.parsePegawaiCsv(csv);
+  const sandbox = { window: {} };
+  vm.runInNewContext(renderPegawaiJs(pegawai), sandbox);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.window.PEGAWAI_ORGANIK)), pegawai);
+});
