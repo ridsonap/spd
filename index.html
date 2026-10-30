@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generator SPD, Surat Tugas &amp; Super - BPS Selayar</title>
+  <title>Generator SPD, Surat Tugas &amp; Surat Pernyataan - BPS Selayar</title>
   <meta name="description" content="Generator dokumen perjalanan dinas (Surat Tugas, SPD, Surat Pernyataan) resmi BPS Kabupaten Kepulauan Selayar.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261030n">
 </head>
 <body>
 
@@ -22,7 +22,7 @@
         </div>
       </div>
       <div class="header-status">
-        <span class="badge-tag"><i class="bi bi-patch-check"></i> Format Resmi • BPS Selayar</span>
+        <span class="badge-tag"><i class="bi bi-patch-check" aria-hidden="true"></i> Format Resmi • BPS Selayar</span>
       </div>
     </div>
   </header>
@@ -30,92 +30,130 @@
   <!-- Main Container -->
   <main class="main-container">
     <div class="dashboard-grid">
-      
+
       <!-- Left Panel: Input & Settings -->
-      <section class="left-panel">
-        
+      <section class="left-panel" aria-label="Isian dokumen">
+
         <!-- Mode Switch: Single vs Batch -->
-        <div class="mode-switch">
-          <button type="button" id="mode-single-btn" class="mode-btn active">
-            <i class="bi bi-file-earmark-text"></i> Form Satuan
+        <div class="mode-switch" role="group" aria-label="Cara pengisian">
+          <button type="button" id="mode-single-btn" class="mode-btn active" aria-pressed="true">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Satu Orang
           </button>
-          <button type="button" id="mode-batch-btn" class="mode-btn">
-            <i class="bi bi-file-earmark-spreadsheet"></i> Upload Excel (Batch)
+          <button type="button" id="mode-batch-btn" class="mode-btn" aria-pressed="false">
+            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Banyak Orang (Excel)
           </button>
         </div>
 
         <!-- 1. Single Mode Form -->
         <div id="single-mode-section">
-          <div class="card" id="form-card">
-            <h2 class="card-title">
-              <span><i class="bi bi-sliders"></i> Parameter Dokumen</span>
-            </h2>
-            <form id="generator-form">
 
-              <!-- Kategori Petugas: Organik vs Non-Organik -->
-              <div class="form-group">
-                <label class="form-label">Kategori Petugas *</label>
+          <!-- Progress -->
+          <nav class="stepper" aria-label="Langkah pengisian">
+            <ol>
+              <li><button type="button" class="step-link" data-goto="1"><span class="step-num">1</span><span class="step-name">Petugas</span></button></li>
+              <li><button type="button" class="step-link" data-goto="2"><span class="step-num">2</span><span class="step-name">Perjalanan</span></button></li>
+              <li><button type="button" class="step-link" data-goto="3"><span class="step-num">3</span><span class="step-name">Anggaran &amp; Format</span></button></li>
+              <li><button type="button" class="step-link" data-goto="4"><span class="step-num">4</span><span class="step-name">Periksa &amp; Unduh</span></button></li>
+            </ol>
+          </nav>
+
+          <form id="generator-form" novalidate>
+
+            <!-- Langkah 1: Petugas -->
+            <section class="card step" id="step-1" data-step="1" aria-labelledby="step-1-title">
+              <h2 class="card-title" id="step-1-title">
+                <span><span class="step-badge" aria-hidden="true">1</span> Petugas</span>
+                <button type="button" id="btn-reset" class="btn btn-ghost btn-sm">
+                  <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Atur ulang form
+                </button>
+              </h2>
+
+              <fieldset class="form-group">
+                <legend class="form-label">Kategori petugas *</legend>
                 <div class="petugas-segmented">
-                  <label class="segment-btn active" id="label-petugas-organik">
+                  <label class="segment-btn active" id="label-petugas-organik" for="radio-organik">
                     <input type="radio" name="petugas_type" id="radio-organik" value="organik" checked>
-                    <i class="bi bi-person-badge"></i> Pegawai Organik BPS
+                    <i class="bi bi-person-badge" aria-hidden="true"></i> Pegawai BPS
                   </label>
-                  <label class="segment-btn" id="label-petugas-nonorganik">
+                  <label class="segment-btn" id="label-petugas-nonorganik" for="radio-nonorganik">
                     <input type="radio" name="petugas_type" id="radio-nonorganik" value="nonorganik">
-                    <i class="bi bi-pencil-square"></i> Non-Organik / Mitra (Manual)
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> Mitra (isi manual)
                   </label>
                 </div>
-              </div>
+              </fieldset>
 
               <!-- Pilihan Pegawai Organik -->
               <div id="container-organik" class="form-group">
-                <label class="form-label" for="select-pegawai-organik">Pilih Pegawai BPS Selayar *</label>
-                <select id="select-pegawai-organik" class="form-select">
+                <label class="form-label" for="select-pegawai-organik">Nama pegawai *</label>
+                <select id="select-pegawai-organik" class="form-select" aria-required="true">
                   <!-- Populated from pegawai.js -->
                 </select>
                 <div id="organik-info-badge" class="organik-badge-info">
-                  <i class="bi bi-info-circle"></i>
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
                   <span id="organik-info-text">Memuat data pegawai...</span>
                 </div>
+                <div class="form-hint" id="pegawai-source">Data pegawai: lokal</div>
               </div>
 
-              <!-- Isian Manual Non-Organik / Mitra -->
+              <!-- Isian Manual Mitra -->
               <div id="container-nonorganik" style="display: none;">
                 <div class="form-group">
-                  <label class="form-label" for="input-nama">Nama Petugas *</label>
-                  <input type="text" id="input-nama" class="form-input" value="Nur Jannah" placeholder="Contoh: Nur Jannah">
+                  <label class="form-label" for="input-nama">Nama mitra *</label>
+                  <input type="text" id="input-nama" class="form-input" placeholder="Nama lengkap sesuai KTP" autocomplete="name" aria-required="true">
                 </div>
                 <div class="grid-2">
                   <div class="form-group">
-                    <label class="form-label" for="input-nip">NIP / NIK *</label>
-                    <input type="text" id="input-nip" class="form-input" value="7301034811760004" placeholder="18 digit NIP / 16 digit NIK">
+                    <label class="form-label" for="input-nip">NIK / NIP *</label>
+                    <input type="text" id="input-nip" class="form-input" inputmode="numeric" placeholder="16 digit NIK / 18 digit NIP" aria-required="true">
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="input-jabatan">Jabatan *</label>
-                    <input type="text" id="input-jabatan" class="form-input" value="Petugas Lapangan Sensus (PPL Sensus)" placeholder="Contoh: Mitra Sensus/Survei">
+                    <input type="text" id="input-jabatan" class="form-input" placeholder="Contoh: Mitra Sensus/Survei" aria-required="true">
                   </div>
                 </div>
               </div>
 
-              <!-- Nomor Surat Lengkap -->
+              <div class="step-nav">
+                <span></span>
+                <button type="button" class="btn btn-primary" data-next>Lanjut <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+              </div>
+            </section>
+
+            <!-- Langkah 2: Perjalanan -->
+            <section class="card step" id="step-2" data-step="2" aria-labelledby="step-2-title">
+              <h2 class="card-title" id="step-2-title">
+                <span><span class="step-badge" aria-hidden="true">2</span> Perjalanan</span>
+              </h2>
+
               <div class="form-group">
-                <label class="form-label" for="input-no-surat">Nomor Surat Tugas (Lengkap) *</label>
-                <input type="text" id="input-no-surat" class="form-input" value="B-11/7301/VS.330/2026" placeholder="Contoh: B-11/7301/VS.330/2026" required>
-                <div class="form-hint">Isi nomor surat lengkap. Di SPD awalan <code>B-</code> akan disesuaikan otomatis.</div>
+                <label class="form-label" for="input-no-surat">Nomor Surat Tugas (lengkap) *</label>
+                <input type="text" id="input-no-surat" class="form-input" placeholder="Contoh: B-11/7301/SS.330/2026" aria-required="true" aria-describedby="hint-no-surat" autocomplete="off">
+                <div class="form-hint" id="hint-no-surat">Tulis lengkap dengan garis miring. Di SPD awalan <code>B-</code> dihapus otomatis.</div>
               </div>
 
-              <!-- Tanggal SPD -->
-              <div class="form-group">
-                <label class="form-label" for="input-tgl-spd">Tanggal SPD &amp; Surat Pernyataan *</label>
-                <input type="date" id="input-tgl-spd" class="form-input" value="2026-07-20" required>
-                <div class="form-hint">Terbaca: <strong id="tgl-spd-preview">20 Juli 2026</strong></div>
-              </div>
-
-              <!-- Dropdown Kecamatan Asal & Tujuan -->
               <div class="grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="select-kecamatan-asal">Kecamatan Asal *</label>
-                  <select id="select-kecamatan-asal" class="form-select" required>
+                  <label class="form-label" for="input-tgl-st">Tanggal Surat Tugas *</label>
+                  <input type="date" id="input-tgl-st" class="form-input" aria-required="true" aria-describedby="hint-tgl-st">
+                  <div class="form-hint" id="hint-tgl-st">Tanggal tanda tangan Surat Tugas</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-tgl-spd">Tanggal SPD *</label>
+                  <input type="date" id="input-tgl-spd" class="form-input" aria-required="true" aria-describedby="hint-tgl-spd">
+                  <div class="form-hint" id="hint-tgl-spd">Juga tanggal Surat Pernyataan. Terbaca: <strong id="tgl-spd-preview">-</strong></div>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="select-kecamatan-asal">
+                    Kecamatan asal *
+                    <span class="help">
+                      <button type="button" class="help-btn" aria-label="Penjelasan Tempat Kedudukan" aria-describedby="tip-kedudukan">?</button>
+                      <span class="help-tip" role="tooltip" id="tip-kedudukan">Tempat kedudukan: lokasi kantor tempat petugas berangkat dan kembali. Format 1 memakai kecamatan asal; Format 2 memakai tempat keberangkatan di langkah 3.</span>
+                    </span>
+                  </label>
+                  <select id="select-kecamatan-asal" class="form-select" aria-required="true">
                     <option value="Benteng" selected>Benteng</option>
                     <option value="Bontoharu">Bontoharu</option>
                     <option value="Bontomanai">Bontomanai</option>
@@ -128,16 +166,16 @@
                     <option value="Pasilambena">Pasilambena</option>
                     <option value="Takabonerate">Takabonerate</option>
                   </select>
-                  <div class="form-hint">Tempat kedudukan berangkat</div>
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label" for="select-kecamatan">Kecamatan Tujuan *</label>
-                  <select id="select-kecamatan" class="form-select" required>
+                  <label class="form-label" for="select-kecamatan">Kecamatan tujuan *</label>
+                  <select id="select-kecamatan" class="form-select" aria-required="true">
+                    <option value="" selected>&mdash; Pilih kecamatan &mdash;</option>
                     <option value="Benteng">Benteng</option>
                     <option value="Bontoharu">Bontoharu</option>
                     <option value="Bontomanai">Bontomanai</option>
-                    <option value="Bontomatene" selected>Bontomatene</option>
+                    <option value="Bontomatene">Bontomatene</option>
                     <option value="Bontosikuyu">Bontosikuyu</option>
                     <option value="Buki">Buki</option>
                     <option value="Pasimarannu">Pasimarannu</option>
@@ -146,142 +184,317 @@
                     <option value="Pasilambena">Pasilambena</option>
                     <option value="Takabonerate">Takabonerate</option>
                   </select>
-                  <div class="form-hint">Wilayah tugas tujuan</div>
                 </div>
               </div>
 
               <!-- Tanggal Perjalanan Dinas Toggle -->
               <label class="toggle-wrapper" for="sync-dates-checkbox">
                 <input type="checkbox" id="sync-dates-checkbox" checked>
-                <span class="toggle-label">Tanggal perjalanan sama dengan Tanggal SPD (1 Hari)</span>
+                <span class="toggle-label">Perjalanan 1 hari, pada Tanggal SPD</span>
               </label>
 
               <div id="tgl-perjalanan-container" class="grid-2" style="display: none; margin-bottom: 0.9rem;">
                 <div class="form-group">
-                  <label class="form-label" for="input-tgl-mulai">Tanggal Mulai</label>
-                  <input type="date" id="input-tgl-mulai" class="form-input" value="2026-07-20">
+                  <label class="form-label" for="input-tgl-mulai">Tanggal berangkat *</label>
+                  <input type="date" id="input-tgl-mulai" class="form-input">
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="input-tgl-selesai">Tanggal Selesai</label>
-                  <input type="date" id="input-tgl-selesai" class="form-input" value="2026-07-20">
+                  <label class="form-label" for="input-tgl-selesai">Tanggal kembali *</label>
+                  <input type="date" id="input-tgl-selesai" class="form-input">
                 </div>
               </div>
 
-              <!-- Tujuan / Tugas -->
               <div class="form-group">
-                <label class="form-label" for="input-tujuan">Tujuan / Tugas Perjalanan Dinas *</label>
-                <textarea id="input-tujuan" class="form-textarea" rows="2" required>Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan Bontomatene</textarea>
-                <div class="form-hint">Disesuaikan otomatis saat mengganti kecamatan atau bisa diedit bebas (otomatis reflow 1 baris, 2 baris, atau 3+ baris tanpa bertumpuk).</div>
+                <label class="form-label" for="input-tujuan">Maksud / tujuan perjalanan dinas *</label>
+                <textarea id="input-tujuan" class="form-textarea" rows="2" aria-required="true" aria-describedby="hint-tujuan" placeholder="Contoh: Translok Petugas Pendataan SE2026 di Kecamatan Bontomatene"></textarea>
+                <div class="form-hint" id="hint-tujuan">Teks panjang dibungkus otomatis menjadi beberapa baris di dokumen.</div>
               </div>
 
-              <!-- Pembebanan Anggaran -->
+              <div class="step-nav">
+                <button type="button" class="btn btn-outline" data-prev><i class="bi bi-arrow-left" aria-hidden="true"></i> Kembali</button>
+                <button type="button" class="btn btn-primary" data-next>Lanjut <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+              </div>
+            </section>
+
+            <!-- Langkah 3: Anggaran & Format -->
+            <section class="card step" id="step-3" data-step="3" aria-labelledby="step-3-title">
+              <h2 class="card-title" id="step-3-title">
+                <span><span class="step-badge" aria-hidden="true">3</span> Anggaran &amp; Format</span>
+              </h2>
+
               <div class="grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="input-pembebanan">Pembebanan (Kode Akun) *</label>
-                  <input type="text" id="input-pembebanan" class="form-input" value="GG 2902 BMA 006 530 B 524113 2" required>
+                  <label class="form-label" for="input-pembebanan">
+                    Kode akun (MAK) *
+                    <span class="help">
+                      <button type="button" class="help-btn" aria-label="Penjelasan MAK" aria-describedby="tip-mak">?</button>
+                      <span class="help-tip" role="tooltip" id="tip-mak">MAK (Mata Anggaran Kegiatan): kode pembebanan biaya, mis. GG 2902 BMA 006 530 B 524113 2 (Program, Kegiatan, KRO, RO, Komponen, Subkomponen, Akun).</span>
+                    </span>
+                  </label>
+                  <input type="text" id="input-pembebanan" class="form-input" aria-required="true" placeholder="Contoh: GG 2902 BMA 006 530 B 524113 2" autocomplete="off">
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="input-uraian-beban">Uraian Pembebanan *</label>
-                  <input type="text" id="input-uraian-beban" class="form-input" value="Transport Daerah Sulit" required>
+                  <label class="form-label" for="input-uraian-beban">Uraian pembebanan *</label>
+                  <input type="text" id="input-uraian-beban" class="form-input" aria-required="true" placeholder="Contoh: Transport Daerah Sulit">
                 </div>
               </div>
 
-              <!-- Collapsible Advanced: Tanggal TTD ST & Unit Kerja -->
-              <div class="form-group">
-                <div class="accordion-header" id="accordion-toggle">
-                  <span><i class="bi bi-gear"></i> Pengaturan Lanjutan (TTD ST &amp; Unit Kerja)</span>
-                  <span id="accordion-indicator"><i class="bi bi-chevron-down"></i> Tampilkan</span>
+              <!-- Format SPD -->
+              <fieldset class="form-group format-fieldset">
+                <legend class="form-label">Format SPD *</legend>
+                <div class="format-options">
+                  <label class="format-option" for="radio-format-1">
+                    <input type="radio" name="format_spd" id="radio-format-1" value="1" checked>
+                    <svg class="format-thumb" viewBox="0 0 64 48" aria-hidden="true" focusable="false">
+                      <rect x="20" y="4" width="26" height="36" rx="2" class="thumb-page"/>
+                      <path d="M24 11h18M24 16h18M24 21h12M24 30h8M34 30h8" class="thumb-line"/>
+                    </svg>
+                    <span class="format-option-title">Format 1</span>
+                    <span class="format-option-desc">1 halaman lampiran</span>
+                  </label>
+                  <label class="format-option" for="radio-format-2">
+                    <input type="radio" name="format_spd" id="radio-format-2" value="2">
+                    <svg class="format-thumb" viewBox="0 0 64 48" aria-hidden="true" focusable="false">
+                      <rect x="8" y="4" width="26" height="36" rx="2" class="thumb-page"/>
+                      <path d="M12 9h18M12 13h18M12 17h18M12 21h18M12 25h18M22 34h8" class="thumb-line"/>
+                      <rect x="32" y="8" width="26" height="36" rx="2" class="thumb-page"/>
+                      <path d="M36 15h18M36 20h18M36 25h12M36 34h8M46 34h8" class="thumb-line"/>
+                    </svg>
+                    <span class="format-option-title">Format 2</span>
+                    <span class="format-option-desc">Halaman depan + lampiran (ditandatangani PPK)</span>
+                  </label>
                 </div>
+              </fieldset>
+
+              <!-- Field khusus Format 2 -->
+              <div id="f2-fields" class="collapsible" aria-hidden="true" inert>
+                <div class="collapsible-inner">
+                  <div class="f2-fields">
+                    <div class="form-group">
+                      <label class="form-label" for="input-tempat-berangkat">Tempat keberangkatan (tempat kedudukan) *</label>
+                      <input type="text" id="input-tempat-berangkat" class="form-input" value="Kabupaten Kepulauan Selayar" aria-required="true">
+                    </div>
+                    <div class="grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="input-golongan">Pangkat/golongan</label>
+                        <input type="text" id="input-golongan" class="form-input" placeholder="Contoh: III/b (mitra: -)">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="input-alat-angkut">Alat angkutan *</label>
+                        <input type="text" id="input-alat-angkut" class="form-input" value="Kendaraan Umum" aria-required="true">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-jabatan-instansi">Jabatan/instansi</label>
+                      <input type="text" id="input-jabatan-instansi" class="form-input" placeholder="Terisi otomatis dari jabatan">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-tingkat-biaya">Tingkat biaya perjalanan dinas</label>
+                      <input type="text" id="input-tingkat-biaya" class="form-input" placeholder="Boleh dikosongkan">
+                    </div>
+                    <div class="anggaran-grid">
+                      <span class="anggaran-head">Pembebanan anggaran</span>
+                      <button type="button" id="btn-isi-anggaran" class="btn btn-outline btn-sm">
+                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Isi ulang dari kode akun
+                      </button>
+                      <div class="anggaran-row">
+                        <label class="form-label" for="input-program-kode">Program</label>
+                        <input type="text" id="input-program-kode" class="form-input kode-input" placeholder="GG" data-anggaran="program-kode">
+                        <label class="sr-only" for="input-program-uraian">Uraian program</label>
+                        <input type="text" id="input-program-uraian" class="form-input" placeholder="Uraian program" data-anggaran="program-uraian">
+                      </div>
+                      <div class="anggaran-row">
+                        <label class="form-label" for="input-kegiatan-kode">Kegiatan</label>
+                        <input type="text" id="input-kegiatan-kode" class="form-input kode-input" placeholder="2902" data-anggaran="kegiatan-kode">
+                        <label class="sr-only" for="input-kegiatan-uraian">Uraian kegiatan</label>
+                        <input type="text" id="input-kegiatan-uraian" class="form-input" placeholder="Uraian kegiatan" data-anggaran="kegiatan-uraian">
+                      </div>
+                      <div class="anggaran-row">
+                        <label class="form-label" for="input-komponen-kode">Komponen</label>
+                        <input type="text" id="input-komponen-kode" class="form-input kode-input" placeholder="530" data-anggaran="komponen-kode">
+                        <label class="sr-only" for="input-komponen-uraian">Uraian komponen</label>
+                        <input type="text" id="input-komponen-uraian" class="form-input" placeholder="Uraian komponen" data-anggaran="komponen-uraian">
+                      </div>
+                    </div>
+                    <div class="grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="input-mata-anggaran">Mata anggaran</label>
+                        <input type="text" id="input-mata-anggaran" class="form-input" placeholder="Boleh dikosongkan" data-anggaran="mata-anggaran">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="input-keterangan">Keterangan lain-lain</label>
+                        <input type="text" id="input-keterangan" class="form-input" placeholder="Boleh dikosongkan">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pengaturan Lanjutan: Unit Kerja & PPK -->
+              <div class="form-group">
+                <button type="button" class="accordion-header" id="accordion-toggle" aria-expanded="false" aria-controls="accordion-content">
+                  <span><i class="bi bi-gear" aria-hidden="true"></i> Pengaturan lanjutan (unit kerja &amp; PPK)</span>
+                  <span id="accordion-indicator"><i class="bi bi-chevron-down" aria-hidden="true"></i> Tampilkan</span>
+                </button>
                 <div class="accordion-content" id="accordion-content">
                   <div class="form-group">
-                    <label class="form-label" for="input-tgl-st">Tanggal TTD Surat Tugas (Default: 15 Juni 2026)</label>
-                    <input type="date" id="input-tgl-st" class="form-input" value="2026-06-15">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="input-unit-kerja">Unit Kerja (Surat Pernyataan)</label>
+                    <label class="form-label" for="input-unit-kerja">Unit kerja (Surat Pernyataan)</label>
                     <input type="text" id="input-unit-kerja" class="form-input" value="BPS Kabupaten Kepulauan Selayar">
                   </div>
+                  <fieldset class="ppk-fieldset">
+                    <legend class="form-label">
+                      Pejabat Pembuat Komitmen (PPK) &middot; Format 2
+                      <span class="help">
+                        <button type="button" class="help-btn" aria-label="Penjelasan PPK" aria-describedby="tip-ppk">?</button>
+                        <span class="help-tip" role="tooltip" id="tip-ppk">PPK (Pejabat Pembuat Komitmen): pejabat yang menandatangani halaman depan SPD dan bagian III lampiran pada Format 2.</span>
+                      </span>
+                    </legend>
+                    <div class="form-group">
+                      <label class="form-label" for="select-ppk">Ambil dari daftar pegawai</label>
+                      <select id="select-ppk" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-nama">Nama PPK *</label>
+                      <input type="text" id="input-ppk-nama" class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-nip">NIP PPK *</label>
+                      <input type="text" id="input-ppk-nip" class="form-input" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="input-ppk-program">Program PPK *</label>
+                      <input type="text" id="input-ppk-program" class="form-input">
+                    </div>
+                    <div class="form-hint">Disimpan di peramban ini untuk pemakaian berikutnya.</div>
+                  </fieldset>
                 </div>
               </div>
 
-              <!-- Submit Button -->
-              <button type="submit" id="btn-generate" class="btn btn-primary btn-block">
-                <i class="bi bi-lightning-charge"></i> Generate Dokumen
-              </button>
-            </form>
-          </div>
+              <div class="step-nav">
+                <button type="button" class="btn btn-outline" data-prev><i class="bi bi-arrow-left" aria-hidden="true"></i> Kembali</button>
+                <button type="button" class="btn btn-primary" data-next>Periksa <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+              </div>
+            </section>
 
-          <!-- Ringkasan Dokumen Card (Minimizable / Maximizable) -->
-          <div class="card summary-card" id="summary-card">
-            <div class="summary-header" id="summary-toggle" role="button" tabindex="0" aria-expanded="false" title="Klik untuk meminimalkan / memaksimalkan">
-              <div class="summary-title">
-                <i class="bi bi-card-checklist"></i> Ringkasan Dokumen
+            <!-- Langkah 4: Periksa & Unduh -->
+            <section class="card step step-review" id="step-4" data-step="4" aria-labelledby="step-4-title">
+              <h2 class="card-title" id="step-4-title">
+                <span><span class="step-badge" aria-hidden="true">4</span> Periksa &amp; Unduh</span>
+              </h2>
+
+              <p class="review-line" id="review-line" aria-live="polite">-</p>
+
+              <div id="form-errors" class="form-errors" role="alert" hidden></div>
+
+              <details class="summary-details" id="summary-card">
+                <summary>Rincian isian</summary>
+                <ul class="summary-list">
+                  <li><span>No. ST:</span> <strong id="sum-no-st">-</strong></li>
+                  <li><span>No. SPD:</span> <strong id="sum-no-spd">-</strong></li>
+                  <li><span>Tgl. SPD:</span> <strong id="sum-tgl-spd">-</strong></li>
+                  <li><span>Waktu:</span> <strong id="sum-waktu">-</strong></li>
+                  <li><span>Rute:</span> <strong id="sum-kecamatan">-</strong></li>
+                  <li><span>Petugas:</span> <strong id="sum-petugas">-</strong></li>
+                  <li><span>Jabatan:</span> <strong id="sum-jabatan">-</strong></li>
+                  <li><span>Tujuan:</span> <strong id="sum-tujuan">-</strong></li>
+                  <li><span>Lama:</span> <strong id="sum-lama">-</strong></li>
+                  <li><span>Format:</span> <strong id="sum-format">-</strong></li>
+                </ul>
+              </details>
+
+              <button type="submit" id="btn-generate" class="btn btn-primary btn-block">
+                <i class="bi bi-lightning-charge" aria-hidden="true"></i> Buat Dokumen
+              </button>
+
+              <div class="result-actions" id="result-actions" hidden>
+                <button type="button" id="btn-download-bundle" class="btn btn-success btn-block btn-lg">
+                  <i class="bi bi-download" aria-hidden="true"></i> <span id="btn-download-bundle-text">Unduh Bundel</span>
+                </button>
+                <div class="result-secondary">
+                  <button type="button" id="btn-print" class="btn btn-outline">
+                    <i class="bi bi-printer" aria-hidden="true"></i> Cetak
+                  </button>
+                  <details class="download-menu">
+                    <summary class="btn btn-outline"><i class="bi bi-files" aria-hidden="true"></i> Unduh per dokumen</summary>
+                    <div class="download-menu-list">
+                      <button type="button" class="btn btn-ghost" data-download="st">Surat Tugas</button>
+                      <button type="button" class="btn btn-ghost" data-download="spd" id="btn-download-spd">SPD</button>
+                      <button type="button" class="btn btn-ghost" data-download="super">Surat Pernyataan</button>
+                    </div>
+                  </details>
+                </div>
               </div>
-              <div class="summary-toggle-action">
-                <span class="summary-toggle-text" id="summary-toggle-text">Buka</span>
-                <i class="bi bi-chevron-down" id="summary-chevron"></i>
+
+              <div id="step4-preview-slot"></div>
+
+              <div class="step-nav">
+                <button type="button" class="btn btn-outline" data-prev><i class="bi bi-arrow-left" aria-hidden="true"></i> Kembali</button>
+                <span></span>
               </div>
-            </div>
-            <div class="summary-body" id="summary-body" style="display: none;">
-              <ul class="summary-list">
-                <li><span>No. ST:</span> <strong id="sum-no-st">B-11/7301/VS.330/2026</strong></li>
-                <li><span>No. SPD:</span> <strong id="sum-no-spd">11/7301/VS.330/2026</strong></li>
-                <li><span>Tgl. SPD:</span> <strong id="sum-tgl-spd">20 Juli 2026</strong></li>
-                <li><span>Waktu:</span> <strong id="sum-waktu">20 Juli 2026 s.d. 20 Juli 2026</strong></li>
-                <li><span>Kecamatan:</span> <strong id="sum-kecamatan">Kecamatan Bontomatene</strong></li>
-                <li><span>Petugas:</span> <strong id="sum-petugas">-</strong></li>
-                <li><span>Jabatan:</span> <strong id="sum-jabatan">-</strong></li>
-                <li><span>Tujuan:</span> <strong id="sum-tujuan">-</strong></li>
-              </ul>
-            </div>
-          </div>
+            </section>
+          </form>
         </div>
 
         <!-- 2. Batch Mode Section (Excel Upload) -->
         <div id="batch-mode-section" style="display: none;">
           <div class="card">
-            <div class="card-title">
-              <span><i class="bi bi-file-earmark-spreadsheet"></i> Batch Generator Excel</span>
-              <button type="button" id="btn-download-template" class="btn btn-outline btn-sm">
-                <i class="bi bi-file-earmark-arrow-down"></i> Unduh Template Excel
-              </button>
-            </div>
+            <h2 class="card-title">
+              <span><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Banyak orang sekaligus</span>
+            </h2>
+
+            <ol class="batch-steps">
+              <li>
+                <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i>
+                <span><strong>1. Unduh template</strong> berisi kolom yang dibutuhkan</span>
+                <button type="button" id="btn-download-template" class="btn btn-outline btn-sm">Unduh template</button>
+              </li>
+              <li>
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span><strong>2. Isi di Excel</strong>, satu baris per orang. Kolom <em>Format SPD</em> diisi 1 atau 2.</span>
+              </li>
+              <li>
+                <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                <span><strong>3. Unggah file</strong> di bawah ini</span>
+              </li>
+            </ol>
 
             <!-- Dropzone -->
-            <div id="dropzone" class="dropzone">
-              <i class="bi bi-cloud-arrow-up dropzone-bi"></i>
-              <div class="dropzone-text">Pilih atau Tarik File Excel ke Sini</div>
-              <div class="dropzone-sub">Mendukung format .xlsx, .xls, .csv</div>
+            <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Pilih file Excel untuk diunggah">
+              <i class="bi bi-cloud-arrow-up dropzone-bi" aria-hidden="true"></i>
+              <div class="dropzone-text">Pilih atau tarik file Excel ke sini</div>
+              <div class="dropzone-sub">Format .xlsx, .xls, atau .csv</div>
               <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display: none;">
             </div>
 
-            <!-- Progress bar -->
+            <div id="batch-message" class="batch-message" role="status" hidden></div>
+
             <div id="batch-progress" class="progress-container">
-              <div class="progress-bar-bg">
+              <div class="progress-bar-bg" role="progressbar" aria-label="Kemajuan pembuatan dokumen" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar">
                 <div id="progress-bar-fill" class="progress-bar-fill"></div>
               </div>
-              <div id="progress-text" class="progress-text">Memproses data...</div>
+              <div id="progress-text" class="progress-text" role="status" aria-live="polite">Memproses data...</div>
             </div>
 
             <!-- Batch Table Preview -->
             <div id="batch-preview-container" style="display: none; margin-top: 1rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="font-size: 0.85rem; font-weight: 600;">Data Ditemukan: <span id="batch-count">0</span> Baris</span>
-                <button type="button" id="btn-clear-batch" class="btn btn-outline btn-sm" style="color: #dc2626;">
-                  <i class="bi bi-x-circle"></i> Batal
+              <div class="batch-head">
+                <span class="batch-count-text">Ditemukan <span id="batch-count">0</span> baris</span>
+                <button type="button" id="btn-clear-batch" class="btn btn-outline btn-sm btn-danger-text">
+                  <i class="bi bi-x-circle" aria-hidden="true"></i> Ganti file
                 </button>
               </div>
 
-              <div class="table-wrapper">
+              <div class="table-wrapper" tabindex="0" aria-label="Tabel data Excel">
                 <table class="batch-table">
                   <thead>
                     <tr>
-                      <th>No</th>
-                      <th>Nomor Surat</th>
-                      <th>Tanggal</th>
-                      <th>Kecamatan</th>
-                      <th>Petugas</th>
-                      <th>Status</th>
+                      <th scope="col">Baris</th>
+                      <th scope="col">Nomor Surat</th>
+                      <th scope="col">Tanggal</th>
+                      <th scope="col">Rute</th>
+                      <th scope="col">Petugas</th>
+                      <th scope="col">Format</th>
+                      <th scope="col">Status</th>
                     </tr>
                   </thead>
                   <tbody id="batch-tbody"></tbody>
@@ -289,12 +502,15 @@
               </div>
 
               <!-- Batch Action Buttons -->
-              <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+              <div class="batch-actions">
                 <button type="button" id="btn-generate-batch-pdf" class="btn btn-success btn-block">
-                  <i class="bi bi-collection"></i> Unduh 1 Bundel PDF Gabungan (Semua Surat)
+                  <i class="bi bi-collection" aria-hidden="true"></i> <span id="btn-batch-pdf-text">Unduh 1 bundel PDF</span>
                 </button>
                 <button type="button" id="btn-generate-batch-zip" class="btn btn-primary btn-block">
-                  <i class="bi bi-file-zip"></i> Unduh Paket File Terpisah (.ZIP)
+                  <i class="bi bi-file-zip" aria-hidden="true"></i> <span id="btn-batch-zip-text">Unduh file terpisah (.zip)</span>
+                </button>
+                <button type="button" id="btn-batch-report" class="btn btn-outline btn-block" hidden>
+                  <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Unduh laporan baris bermasalah (.xlsx)
                 </button>
               </div>
             </div>
@@ -304,34 +520,39 @@
       </section>
 
       <!-- Right Panel: PDF Live Preview -->
-      <section class="right-panel">
+      <section class="right-panel" id="right-panel" aria-label="Pratinjau dokumen">
         <div class="card preview-container" id="preview-container">
           <div class="preview-toolbar">
-            <div class="tabs-group">
-              <button id="tab-merged" class="tab-btn active">Bundel (3 Hal)</button>
-              <button id="tab-st" class="tab-btn">Surat Tugas</button>
-              <button id="tab-spd" class="tab-btn">SPD</button>
-              <button id="tab-super" class="tab-btn">Surat Pernyataan</button>
+            <div class="tabs-group" role="tablist" aria-label="Dokumen">
+              <button type="button" role="tab" id="tab-merged" class="tab-btn active" aria-selected="true">Bundel</button>
+              <button type="button" role="tab" id="tab-st" class="tab-btn" aria-selected="false">Surat Tugas</button>
+              <button type="button" role="tab" id="tab-spd" class="tab-btn" aria-selected="false">SPD</button>
+              <button type="button" role="tab" id="tab-super" class="tab-btn" aria-selected="false">Surat Pernyataan</button>
             </div>
-            <div class="preview-actions">
-              <button id="btn-download-tab" class="btn btn-success btn-sm" disabled title="Unduh Bundel (3 Hal)">
-                <i class="bi bi-download"></i> Unduh
-              </button>
-              <button id="btn-print" class="btn btn-outline btn-sm" disabled title="Cetak Dokumen">
-                <i class="bi bi-printer"></i> Cetak
-              </button>
-            </div>
+            <a id="btn-open-tab" class="btn btn-outline btn-sm" target="_blank" rel="noopener" hidden>
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Buka di tab baru
+            </a>
           </div>
 
           <!-- Empty State -->
           <div id="empty-state" class="empty-state">
-            <i class="bi bi-file-earmark-pdf empty-bi"></i>
-            <h3>Memuat Pratinjau Dokumen...</h3>
-            <p>Silakan tunggu sesaat atau klik tombol <strong>Generate Dokumen</strong>.</p>
+            <i class="bi bi-file-earmark-pdf empty-bi" aria-hidden="true"></i>
+            <h3>Belum ada dokumen</h3>
+            <p>Isi langkah 1–3, lalu klik <strong>Buat Dokumen</strong> di langkah 4. Pratinjau akan muncul di sini.</p>
+          </div>
+
+          <!-- Fallback when the browser cannot show PDFs inline (most phones) -->
+          <div id="preview-fallback" class="empty-state preview-fallback" hidden>
+            <i class="bi bi-phone empty-bi" aria-hidden="true"></i>
+            <h3>Dokumen siap</h3>
+            <p>Browser ini tidak bisa menampilkan PDF di dalam halaman.</p>
+            <a id="btn-open-fallback" class="btn btn-primary" target="_blank" rel="noopener">
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Buka PDF di tab baru
+            </a>
           </div>
 
           <!-- PDF Embed Iframe -->
-          <iframe id="pdf-viewer" class="pdf-viewer-frame" style="display: none;" title="Pratinjau Dokumen"></iframe>
+          <iframe id="pdf-viewer" class="pdf-viewer-frame" style="display: none;" title="Pratinjau dokumen"></iframe>
         </div>
       </section>
 
@@ -339,9 +560,9 @@
   </main>
 
   <!-- Toast -->
-  <div id="toast" class="toast">
-    <i class="bi bi-check-circle-fill" style="color: #10b981;"></i>
-    <span id="toast-text">Dokumen berhasil di-generate!</span>
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+    <span id="toast-text"></span>
   </div>
 
   <!-- Footer -->
@@ -354,8 +575,10 @@
   <script src="vendor/pdf-lib.min.js"></script>
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="pegawai.js?v=20261030e"></script>
-  <script src="templates.js?v=20261030e"></script>
-  <script src="app.js?v=20261030e"></script>
+  <script src="pegawai.js?v=20261030n"></script>
+  <script src="templates.js?v=20261030n"></script>
+  <script src="core.js?v=20261030n"></script>
+  <script src="render.js?v=20261030n"></script>
+  <script src="app.js?v=20261030n"></script>
 </body>
 </html>
