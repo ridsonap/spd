@@ -628,8 +628,12 @@
       if (!isIsoDate(v)) { add(field, `${label[0].toUpperCase()}${label.slice(1)} tidak dikenali ("${v}"). Gunakan format TTTT-BB-HH atau HH/BB/TTTT.`); return false; }
       return true;
     };
-    dateField('tglSt', 'tanggal surat tugas');
-    dateField('tglSpd', 'tanggal SPD');
+    const okSt = dateField('tglSt', 'tanggal surat tugas');
+    const okSpd = dateField('tglSpd', 'tanggal SPD');
+    // The SPD is issued on or after the surat tugas it is based on.
+    if (okSt && okSpd && str(input.tglSpd) < str(input.tglSt)) {
+      add('tglSpd', 'Tanggal SPD tidak boleh sebelum tanggal surat tugas.');
+    }
     const okMulai = dateField('tglMulai', 'tanggal mulai');
     const okSelesai = dateField('tglSelesai', 'tanggal selesai');
     if (okMulai && okSelesai && str(input.tglSelesai) < str(input.tglMulai)) {

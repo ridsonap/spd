@@ -134,6 +134,7 @@
     tabSpd: $('tab-spd'),
     tabSuper: $('tab-super'),
     btnOpenTab: $('btn-open-tab'),
+    btnDownloadTab: $('btn-download-tab'),
     pdfViewer: $('pdf-viewer'),
     emptyState: $('empty-state'),
     previewFallback: $('preview-fallback'),
@@ -628,6 +629,8 @@
       : e));
     const dash = (v) => v || '-';
 
+    // The date picker greys out SPD dates before the surat tugas; the validator still reports typed ones.
+    el.tglSpd.min = el.inputTglSt.value;
     el.tglSpdPreview.textContent = dash(data.tglSpdIndo);
     el.nomorPreview.textContent = dash(data.stNo);
     el.reviewLine.textContent = Core.ringkasanSatuBaris(data);
@@ -762,7 +765,9 @@
     el.previewFallback.hidden = !url || inline;
     el.pdfViewer.style.display = url && inline ? 'block' : 'none';
     el.btnOpenTab.hidden = !url;
+    el.btnDownloadTab.hidden = !url;
     if (url) {
+      el.btnDownloadTab.title = `Unduh ${tab === 'merged' ? 'bundel' : DOC_NAMES[tab]} (PDF)`;
       el.btnOpenTab.href = url;
       el.btnOpenFallback.href = url;
       if (inline && el.pdfViewer.getAttribute('src') !== url) el.pdfViewer.src = url;
@@ -1378,7 +1383,8 @@
     });
     el.btnPrint.addEventListener('click', printBundle);
 
-    // Preview tabs
+    // Preview tabs; the toolbar download follows the active tab
+    el.btnDownloadTab.addEventListener('click', () => downloadDoc(state.activeTab));
     el.tabMerged.addEventListener('click', () => updateViewerTab('merged'));
     el.tabSt.addEventListener('click', () => updateViewerTab('st'));
     el.tabSpd.addEventListener('click', () => updateViewerTab('spd'));
