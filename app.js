@@ -493,6 +493,56 @@
   }
 
   /**
+   * Format dynamic justified statement paragraph for Surat Pernyataan
+   */
+  function formatSuperParagraph(superNo, tglPelaksanaan, font) {
+    const fullText = `Menerangkan bahwa dalam rangka melaksanakan perjalanan dinas dalam kota untuk melaksanakan tugas kedinasan sesuai surat tugas nomor: ${superNo} pelaksanaan tanggal ${tglPelaksanaan}, saya benar-benar tidak menggunakan kendaraan dinas.`;
+    // ponytail: fixed 510pt width and 3-line budget; upgrade to full reflow if statement exceeds 3 lines
+    const targetWidth = 510.0;
+    const fontSize = 11.2;
+
+    const words = fullText.split(/\s+/);
+    const lines = [];
+    let cur = [];
+
+    for (const w of words) {
+      const candidate = [...cur, w].join(' ');
+      if (font.widthOfTextAtSize(candidate, fontSize) <= targetWidth) {
+        cur.push(w);
+      } else {
+        if (cur.length > 0) {
+          lines.push(cur.join(' '));
+          cur = [w];
+        } else {
+          lines.push(w);
+          cur = [];
+        }
+      }
+    }
+    if (cur.length > 0) lines.push(cur.join(' '));
+
+    const yCoords = [550.606, 530.559, 510.511];
+    const pdfParts = [];
+
+    lines.forEach((line, idx) => {
+      const y = yCoords[idx] || (510.511 - ((idx - 2) * 20.047));
+      const isLast = idx === lines.length - 1;
+      const spaces = line.split(' ').length - 1;
+      const naturalW = font.widthOfTextAtSize(line, fontSize);
+      const escaped = escapePdfText(line);
+
+      if (!isLast && spaces > 0 && naturalW < targetWidth) {
+        const tw = (targetWidth - naturalW) / spaces;
+        pdfParts.push(`BT 41.516 ${y.toFixed(3)} Td ${tw.toFixed(3)} Tw /F1 11.2 Tf  [(${escaped})] TJ 0.000 Tw ET`);
+      } else {
+        pdfParts.push(`BT 41.516 ${y.toFixed(3)} Td /F1 11.2 Tf  [(${escaped})] TJ ET`);
+      }
+    });
+
+    return pdfParts.join('\n');
+  }
+
+  /**
    * Generate Super Document
    */
   async function generateSuper(superBytes, opts) {
@@ -511,8 +561,16 @@
     const tglSelesai = formatIndoDate(opts.tglSelesai || opts.tglMulai || opts.tglSpd);
     const tglPelaksanaan = (tglMulai === tglSelesai) ? tglMulai : `${tglMulai} s.d. ${tglSelesai}`;
 
-    text = text.replace('B-114.21/7301/SS.330/2026', superNo);
-    text = text.replace('pelaksanaan tanggal 20 Juli 2026', `pelaksanaan tanggal ${tglPelaksanaan}`);
+    // Dynamic Main Statement Paragraph (Justified & Auto-Wrapped, No Margin Overflow)
+    const paraStartMarker = 'BT 41.516 550.606 Td 3.425 Tw /F1 11.2 Tf  [(Menerangkan';
+    const paraEndMarker = '[(benar tidak menggunakan kendaraan dinas.)] TJ ET';
+    const pStartIdx = text.indexOf(paraStartMarker);
+    const pEndIdx = text.indexOf(paraEndMarker);
+
+    if (pStartIdx !== -1 && pEndIdx !== -1) {
+      const newParaBlock = formatSuperParagraph(superNo, tglPelaksanaan, font);
+      text = text.substring(0, pStartIdx) + newParaBlock + text.substring(pEndIdx + paraEndMarker.length);
+    }
 
     const namaVal = (opts.nama || 'Nur Jannah').trim();
     const nipVal = (opts.nip || '7301034811760004').trim();
