@@ -46,7 +46,7 @@
 
         <!-- 1. Single Mode Form -->
         <div id="single-mode-section">
-          <div class="card">
+          <div class="card" id="form-card">
             <h2 class="card-title">
               <span><i class="bi bi-sliders"></i> Parameter Dokumen</span>
             </h2>
@@ -209,10 +209,20 @@
                 <i class="bi bi-lightning-charge"></i> Generate Dokumen
               </button>
             </form>
+          </div>
 
-            <!-- Ringkasan Dokumen -->
-            <div class="summary-box">
-              <div class="summary-title"><i class="bi bi-card-checklist"></i> Ringkasan Dokumen</div>
+          <!-- Ringkasan Dokumen Card (Minimizable / Maximizable) -->
+          <div class="card summary-card" id="summary-card">
+            <div class="summary-header" id="summary-toggle" role="button" tabindex="0" aria-expanded="false" title="Klik untuk meminimalkan / memaksimalkan">
+              <div class="summary-title">
+                <i class="bi bi-card-checklist"></i> Ringkasan Dokumen
+              </div>
+              <div class="summary-toggle-action">
+                <span class="summary-toggle-text" id="summary-toggle-text">Buka</span>
+                <i class="bi bi-chevron-down" id="summary-chevron"></i>
+              </div>
+            </div>
+            <div class="summary-body" id="summary-body" style="display: none;">
               <ul class="summary-list">
                 <li><span>No. ST:</span> <strong id="sum-no-st">B-11/7301/VS.330/2026</strong></li>
                 <li><span>No. SPD:</span> <strong id="sum-no-spd">11/7301/VS.330/2026</strong></li>
@@ -295,7 +305,7 @@
 
       <!-- Right Panel: PDF Live Preview -->
       <section class="right-panel">
-        <div class="card preview-container">
+        <div class="card preview-container" id="preview-container">
           <div class="preview-toolbar">
             <div class="tabs-group">
               <button id="tab-merged" class="tab-btn active">Bundel (3 Hal)</button>
@@ -344,8 +354,8 @@
   <script src="vendor/pdf-lib.min.js"></script>
   <script src="vendor/xlsx.full.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="pegawai.js?v=20261030d"></script>
-  <script src="templates.js?v=20261030d"></script>
-  <script src="app.js?v=20261030d"></script>
+  <script src="pegawai.js?v=20261030e"></script>
+  <script src="templates.js?v=20261030e"></script>
+  <script src="app.js?v=20261030e"></script>
 </body>
 </html>

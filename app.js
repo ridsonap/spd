@@ -55,6 +55,12 @@
     sumPetugas: document.getElementById('sum-petugas'),
     sumJabatan: document.getElementById('sum-jabatan'),
     sumTujuan: document.getElementById('sum-tujuan'),
+    formCard: document.getElementById('form-card'),
+    summaryCard: document.getElementById('summary-card'),
+    summaryToggle: document.getElementById('summary-toggle'),
+    summaryBody: document.getElementById('summary-body'),
+    summaryToggleText: document.getElementById('summary-toggle-text'),
+    previewContainer: document.getElementById('preview-container'),
 
     // Single Actions
     btnGenerate: document.getElementById('btn-generate'),
@@ -769,6 +775,42 @@
   }
 
   /**
+   * Sync preview container height with bottom of Generate Dokumen button
+   */
+  function syncPreviewHeight() {
+    if (window.innerWidth <= 1024) {
+      if (el.previewContainer) el.previewContainer.style.height = '';
+      return;
+    }
+    const btnGen = el.btnGenerate;
+    const preview = el.previewContainer;
+    if (!btnGen || !preview) return;
+
+    const btnBottom = btnGen.getBoundingClientRect().bottom;
+    const previewTop = preview.getBoundingClientRect().top;
+    const targetHeight = Math.round(btnBottom - previewTop);
+
+    if (targetHeight > 400) {
+      preview.style.height = `${targetHeight}px`;
+    }
+  }
+
+  /**
+   * Toggle Ringkasan Dokumen minimize/maximize
+   */
+  function toggleSummary() {
+    if (!el.summaryCard || !el.summaryBody) return;
+    const isExpanded = el.summaryCard.classList.toggle('expanded');
+    el.summaryBody.style.display = isExpanded ? 'block' : 'none';
+    if (el.summaryToggleText) {
+      el.summaryToggleText.textContent = isExpanded ? 'Tutup' : 'Buka';
+    }
+    if (el.summaryToggle) {
+      el.summaryToggle.setAttribute('aria-expanded', String(isExpanded));
+    }
+  }
+
+  /**
    * Parse date from Excel cell (supports serial number, DD/MM/YYYY, YYYY-MM-DD, or Indonesian text)
    */
   function parseExcelDate(val) {
@@ -1320,6 +1362,24 @@
       }
     });
 
+    // Summary Card minimize / maximize
+    if (el.summaryToggle) {
+      el.summaryToggle.addEventListener('click', toggleSummary);
+      el.summaryToggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleSummary();
+        }
+      });
+    }
+
+    // Sync preview height on resize and form changes
+    if (window.ResizeObserver && el.formCard) {
+      const ro = new ResizeObserver(() => syncPreviewHeight());
+      ro.observe(el.formCard);
+    }
+    window.addEventListener('resize', syncPreviewHeight);
+
     // Excel Batch Listeners
     el.btnDownloadTemplate.addEventListener('click', downloadExcelTemplate);
 
@@ -1353,6 +1413,7 @@
     populatePegawaiDropdown();
     updateSummary();
     initListeners();
+    syncPreviewHeight();
     generateSingle();
     trySyncGoogleSheet();
   }
