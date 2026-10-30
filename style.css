@@ -223,6 +223,36 @@ body {
   margin-top: 0.25rem;
 }
 
+.form-hint.is-warning {
+  color: #92400e;
+}
+
+.form-hint details {
+  margin-top: 0.25rem;
+}
+
+.form-hint summary {
+  cursor: pointer;
+}
+
+.form-hint ul {
+  margin: 0.25rem 0 0 1.1rem;
+  padding: 0;
+}
+
+.ppk-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.ppk-status .form-hint {
+  margin-top: 0;
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

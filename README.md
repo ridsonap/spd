@@ -14,7 +14,7 @@ Aplikasi web statis client-side untuk membuat dokumen administrasi resmi perjala
 
 - **100% Client-Side**: berjalan di peramban tanpa server. Data tetap di perangkat pengguna. Satu-satunya request jaringan adalah sinkronisasi daftar pegawai dari Google Sheet (opsional).
 - **Pilihan Kategori Petugas**:
-  - **Pegawai Organik BPS**: daftar pegawai dari `pegawai.js`, otomatis diperbarui dari [Google Spreadsheet](https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247) bila sinkronisasi berhasil dan datanya lengkap. Indikator di bawah pilihan pegawai menunjukkan sumbernya (lokal atau tersinkron).
+  - **Pegawai Organik BPS**: daftar pegawai dibaca dari [Google Spreadsheet](https://docs.google.com/spreadsheets/u/0/d/1hnGYZh1Ng61W8HYfYg5_DRRyvtSedklDSK2b6GEqUZc/htmlview#gid=2128965247) setiap kali halaman dibuka. Penambahan, pengurangan, dan perubahan jabatan/pangkat/golongan cukup dilakukan di Sheet. Baris tanpa jabatan dilewati dan baris dengan golongan/pangkat kosong tetap dipakai; keduanya ditampilkan sebagai "baris di Google Sheet perlu dilengkapi" di bawah pilihan pegawai. Bila Sheet tidak bisa dibaca, aplikasi memakai salinan `pegawai.js` dan menampilkan alasannya.
   - **Non-Organik / Mitra**: isi Nama, NIP (18 digit) atau NIK (16 digit), dan Jabatan secara manual.
 - **Alur 4 langkah**: ① Petugas → ② Perjalanan → ③ Anggaran & Format → ④ Periksa & Unduh. Di layar lebar semua langkah tampil berurutan; di HP (< 768px) tampil satu per satu dengan tombol *Lanjut*/*Kembali*, dan langkah yang sudah diisi bisa diklik lagi. Langkah ④ menampilkan ringkasan satu kalimat, daftar isian yang belum benar (dengan tautan ke field-nya), pratinjau, lalu tombol **Unduh Bundel**, *Cetak*, dan *Unduh per dokumen*.
 - **Pratinjau di HP**: browser yang tidak bisa menampilkan PDF di dalam halaman mendapat tombol *Buka PDF di tab baru*.
@@ -55,7 +55,13 @@ Tidak ada build step. Buka `index.html` langsung, atau jalankan server statis ap
 npm test                 # unit test + cek templates.js sinkron
 npm run smoke            # buat bundel contoh ke out/ dan cek jumlah halaman + teks kunci
 npm run build:templates  # setelah mengganti templates/*.pdf
+npm run update:pegawai   # perbarui pegawai.js (salinan offline) dari Google Sheet
 ```
+
+### Pergantian pejabat
+
+- **Kepala BPS**: ubah `KEPALA_BPS` (nama, NIP) di `core.js`. Nama dan NIP di Surat Tugas dan lampiran SPD diganti dan diposisikan ulang di tengah. QR TTE pada template Surat Tugas tidak ikut berubah.
+- **PPK**: ubah `PPK_DEFAULT` di `core.js`. Peramban hanya menyimpan isian PPK yang berbeda dari default, jadi pengguna yang tidak pernah mengubah PPK otomatis memakai default baru. Pengguna yang pernah mengubahnya bisa menekan *Pakai PPK default* di Pengaturan Lanjutan.
 
 Tes hanya memakai Node (versi 18+) dan library di `vendor/`; `npm install` tidak diperlukan.
 
