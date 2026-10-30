@@ -218,3 +218,14 @@ test('normalizeBatchRow: header fleksibel, default, dan pencocokan pegawai', () 
   const fmtErr = Core.buildSpdData(Core.normalizeBatchRow({ 'Format SPD': '3' }, { pegawai }).input).errors;
   assert.ok(fmtErr.some(e => e.field === 'format'));
 });
+
+test('susunNomor: nomor urut + kode klasifikasi + tahun', () => {
+  assert.strictEqual(Core.susunNomor('11', '7301/SS.330', '2026'), 'B-11/7301/SS.330/2026');
+  assert.strictEqual(Core.susunNomor(' b-11 ', '/7301/SS.330/', 2026), 'B-11/7301/SS.330/2026');
+  // A full number pasted into the urut field is used as-is.
+  assert.strictEqual(Core.susunNomor('B-114/7301/SS.360/2026', '7301/SS.330', '2026'), 'B-114/7301/SS.360/2026');
+  assert.strictEqual(Core.susunNomor('', '7301/SS.330', '2026'), '');
+  // Without a kode the number stays incomplete so validation can flag it.
+  assert.strictEqual(Core.isNomorLengkap(Core.susunNomor('11', '', '2026')), false);
+  assert.strictEqual(Core.KODE_KLASIFIKASI_DEFAULT, '7301/SS.330');
+});

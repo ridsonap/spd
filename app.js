@@ -41,6 +41,8 @@
 
     // Langkah 2: Perjalanan
     noSurat: $('input-no-surat'),
+    inputKodeKlasifikasi: $('input-kode-klasifikasi'),
+    nomorPreview: $('nomor-preview'),
     inputTglSt: $('input-tgl-st'),
     tglSpd: $('input-tgl-spd'),
     tglSpdPreview: $('tgl-spd-preview'),
@@ -143,7 +145,9 @@
     nama: () => (state.petugasMode === 'organik' ? el.selectPegawaiOrganik : el.inputNama),
     nip: () => (state.petugasMode === 'organik' ? el.selectPegawaiOrganik : el.inputNip),
     jabatan: () => (state.petugasMode === 'organik' ? el.selectPegawaiOrganik : el.inputJabatan),
-    noSurat: () => el.noSurat,
+    // An incomplete number with an empty kode points at the kode field.
+    noSurat: () => (el.noSurat.value.trim() && !el.noSurat.value.includes('/') && !el.inputKodeKlasifikasi.value.trim()
+      ? el.inputKodeKlasifikasi : el.noSurat),
     tglSt: () => el.inputTglSt,
     tglSpd: () => el.tglSpd,
     tglMulai: () => (el.syncDatesCheckbox.checked ? el.tglSpd : el.tglMulai),
@@ -198,6 +202,7 @@
 
   // Field values remembered between visits (habits, not personal data).
   const REMEMBERED = {
+    kodeKlasifikasi: () => el.inputKodeKlasifikasi,
     kecamatanAsal: () => el.selectKecamatanAsal,
     pembebanan: () => el.inputPembebanan,
     uraianBeban: () => el.inputUraianBeban,
@@ -363,6 +368,14 @@
   }
 
   /**
+   * Full nomor surat from "nomor urut" + "kode klasifikasi" + year of the ST date.
+   */
+  function nomorSurat() {
+    const tahun = (el.inputTglSt.value.match(/^\d{4}/) || [String(new Date().getFullYear())])[0];
+    return Core.susunNomor(el.noSurat.value, el.inputKodeKlasifikasi.value, tahun);
+  }
+
+  /**
    * Raw builder input from the form
    */
   function collectInput() {
@@ -387,7 +400,7 @@
       mataAnggaran: el.inputMataAnggaran.value,
       keterangan: el.inputKeterangan.value,
       ppk: currentPpk(),
-      noSurat: el.noSurat.value,
+      noSurat: nomorSurat(),
       tglSt: el.inputTglSt.value,
       tglSpd,
       tglMulai,
@@ -572,10 +585,15 @@
    * Update live summary, inline validation and progress marks
    */
   function updateSummary() {
-    const { data, errors } = Core.buildSpdData(collectInput());
+    const built = Core.buildSpdData(collectInput());
+    const data = built.data;
+    const errors = built.errors.map(e => (e.field === 'noSurat' && inputFor('noSurat') === el.inputKodeKlasifikasi
+      ? Object.assign({}, e, { message: `Isi kode klasifikasi, misalnya ${Core.KODE_KLASIFIKASI_DEFAULT}.` })
+      : e));
     const dash = (v) => v || '-';
 
     el.tglSpdPreview.textContent = dash(data.tglSpdIndo);
+    el.nomorPreview.textContent = dash(data.stNo);
     el.reviewLine.textContent = Core.ringkasanSatuBaris(data);
     el.sumNoSt.textContent = dash(data.stNo);
     el.sumNoSpd.textContent = dash(data.spdNo);
@@ -824,6 +842,7 @@
     el.inputPpkNip.value = ppk.nip || '';
     el.inputPpkProgram.value = ppk.program || '';
     const last = store.get('terakhir', {});
+    el.inputKodeKlasifikasi.value = Core.KODE_KLASIFIKASI_DEFAULT;
     Object.entries(REMEMBERED).forEach(([key, getter]) => {
       if (last[key]) getter().value = last[key];
     });

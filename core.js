@@ -38,6 +38,9 @@
     program: 'Program Penyediaan dan Pelayanan Informasi Statistik'
   };
 
+  // Kode klasifikasi used by the ST template; the form remembers the last one used.
+  const KODE_KLASIFIKASI_DEFAULT = '7301/SS.330';
+
   const DEFAULTS = {
     format: 1,
     alatAngkut: 'Kendaraan Umum',
@@ -205,6 +208,18 @@
   function isNomorLengkap(raw) {
     const { spdNo } = formatNomor(raw);
     return /^[^/\s]+(\/[^/\s]+){2,}$/.test(spdNo);
+  }
+
+  /**
+   * Build "B-<urut>/<kode klasifikasi>/<tahun>" from the parts typed in the form.
+   * A full number (containing "/") typed into `urut` is returned unchanged.
+   */
+  function susunNomor(urut, kode, tahun) {
+    const u = String(urut || '').trim().replace(/^NOMOR\s*:\s*/i, '');
+    if (!u) return '';
+    if (u.includes('/')) return u;
+    const parts = [u.replace(/^B-/i, ''), String(kode || '').trim().replace(/^\/+|\/+$/g, ''), String(tahun || '').trim()];
+    return `B-${parts.filter(Boolean).join('/')}`;
   }
 
   /**
@@ -873,6 +888,7 @@
     KANTOR,
     KEPALA_BPS,
     PPK_DEFAULT,
+    KODE_KLASIFIKASI_DEFAULT,
     DEFAULTS,
     KECAMATAN,
     INDO_MONTHS,
@@ -888,6 +904,7 @@
     parseExcelDate,
     formatNomor,
     isNomorLengkap,
+    susunNomor,
     formatKecamatan,
     shortTempat,
     escapePdfText,

@@ -1412,3 +1412,23 @@ fieldset {
 .step-link {
   min-width: var(--touch);
 }
+
+/* Nomor surat: urut + kode klasifikasi */
+.nomor-grid {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) 2fr;
+  gap: 0.75rem;
+}
+
+.nomor-grid .form-group {
+  margin-bottom: 0.35rem;
+}
+
+.nomor-hint {
+  margin: 0 0 0.9rem;
+}
+
+.nomor-hint strong {
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
