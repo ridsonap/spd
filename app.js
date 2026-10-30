@@ -31,6 +31,7 @@
     noSurat: document.getElementById('input-no-surat'),
     tglSpd: document.getElementById('input-tgl-spd'),
     tglSpdPreview: document.getElementById('tgl-spd-preview'),
+    selectKecamatanAsal: document.getElementById('select-kecamatan-asal'),
     selectKecamatan: document.getElementById('select-kecamatan'),
     syncDatesCheckbox: document.getElementById('sync-dates-checkbox'),
     tglPerjalananContainer: document.getElementById('tgl-perjalanan-container'),
@@ -361,14 +362,15 @@
     el.tglSpdPreview.textContent = tglSpdIndo;
 
     const { stNo, spdNo } = formatNomor(el.noSurat.value);
-    const kec = formatKecamatan(el.selectKecamatan.value);
+    const kecAsal = formatKecamatan(el.selectKecamatanAsal ? el.selectKecamatanAsal.value : 'Benteng');
+    const kecTujuan = formatKecamatan(el.selectKecamatan.value || 'Bontomatene');
     const petugas = getCurrentPetugas();
 
     el.sumNoSt.textContent = stNo;
     el.sumNoSpd.textContent = spdNo;
     el.sumTglSpd.textContent = tglSpdIndo;
     el.sumWaktu.textContent = `${tglMulaiIndo} s.d. ${tglSelesaiIndo}`;
-    el.sumKecamatan.textContent = kec;
+    el.sumKecamatan.textContent = `${kecAsal} → ${kecTujuan}`;
     el.sumPetugas.textContent = `${petugas.nama} (${petugas.nip}) [${petugas.isOrganik ? 'Organik' : 'Mitra'}]`;
     el.sumJabatan.textContent = petugas.jabatan;
     if (el.sumTujuan) el.sumTujuan.textContent = el.inputTujuan.value || '-';
@@ -430,12 +432,61 @@
     let text = new TextDecoder('latin1').decode(window.pako.inflate(stream.getContents()));
 
     const { spdNo } = formatNomor(opts.noSurat);
-    const kecFormatted = formatKecamatan(opts.kecamatan);
-    const tglSpd = formatIndoDate(opts.tglSpd);
+    const kecAsal = formatKecamatan(opts.kecamatanAsal || 'Benteng');
+    const kecTujuan = formatKecamatan(opts.kecamatan || 'Bontomatene');
+    const tglBerangkat = formatIndoDate(opts.tglMulai || opts.tglSpd);
+    const tglPulang = formatIndoDate(opts.tglSelesai || opts.tglMulai || opts.tglSpd);
 
+    // Nomor SPD
     text = text.replaceAll('114.21/7301/SS.330/2026', spdNo);
-    text = text.replaceAll('Kecamatan Bontomatene', kecFormatted);
-    text = text.replaceAll('20 Juli 2026', tglSpd);
+
+    // 1. Kolom I: Berangkat dari (Tempat Kedudukan) -> kecAsal
+    text = text.replace(
+      'BT 406.107 741.377 Td /F1 12.0 Tf  [(Kecamatan Bontomatene)] TJ ET',
+      `BT 406.107 741.377 Td /F1 12.0 Tf  [(${escapePdfText(kecAsal)})] TJ ET`
+    );
+
+    // 2. Kolom I: Pada Tanggal -> tglBerangkat
+    text = text.replace(
+      'BT 406.107 711.365 Td /F1 12.0 Tf  [(20 Juli 2026)] TJ ET',
+      `BT 406.107 711.365 Td /F1 12.0 Tf  [(${escapePdfText(tglBerangkat)})] TJ ET`
+    );
+
+    // 3. Kolom I: Ke -> kecTujuan
+    text = text.replace(
+      'BT 406.107 695.609 Td /F1 12.0 Tf  [(Kecamatan Bontomatene)] TJ ET',
+      `BT 406.107 695.609 Td /F1 12.0 Tf  [(${escapePdfText(kecTujuan)})] TJ ET`
+    );
+
+    // 4. Kolom II (Kiri): Tiba di -> kecTujuan
+    text = text.replace(
+      'BT 136.814 589.067 Td /F1 12.0 Tf  [(Kecamatan Bontomatene)] TJ ET',
+      `BT 136.814 589.067 Td /F1 12.0 Tf  [(${escapePdfText(kecTujuan)})] TJ ET`
+    );
+
+    // 5. Kolom II (Kiri): Pada Tanggal (tiba) -> tglBerangkat
+    text = text.replace(
+      'BT 136.814 573.311 Td /F1 12.0 Tf  [(20 Juli 2026)] TJ ET',
+      `BT 136.814 573.311 Td /F1 12.0 Tf  [(${escapePdfText(tglBerangkat)})] TJ ET`
+    );
+
+    // 6. Kolom II (Kanan): Berangkat dari -> kecTujuan
+    text = text.replace(
+      'BT 406.107 589.067 Td /F1 12.0 Tf  [(Kecamatan Bontomatene)] TJ ET',
+      `BT 406.107 589.067 Td /F1 12.0 Tf  [(${escapePdfText(kecTujuan)})] TJ ET`
+    );
+
+    // 7. Kolom II (Kanan): Ke -> kecAsal
+    text = text.replace(
+      'BT 406.107 573.311 Td /F1 12.0 Tf  [(Kecamatan Bontomatene)] TJ ET',
+      `BT 406.107 573.311 Td /F1 12.0 Tf  [(${escapePdfText(kecAsal)})] TJ ET`
+    );
+
+    // 8. Kolom II (Kanan): Pada Tanggal (pulang) -> tglPulang
+    text = text.replace(
+      'BT 406.107 557.555 Td /F1 12.0 Tf  [(20 Juli 2026)] TJ ET',
+      `BT 406.107 557.555 Td /F1 12.0 Tf  [(${escapePdfText(tglPulang)})] TJ ET`
+    );
 
     page.node.set(PDFName.of('Contents'), doc.context.register(doc.context.flateStream(new TextEncoder().encode(text))));
     return doc;
@@ -445,11 +496,14 @@
    * Generate Super Document
    */
   async function generateSuper(superBytes, opts) {
-    const { PDFDocument, PDFName } = window.PDFLib;
+    const { PDFDocument, PDFName, StandardFonts } = window.PDFLib;
     const doc = await PDFDocument.load(superBytes);
     const page = doc.getPages()[0];
     const stream = doc.context.lookup(page.node.Contents());
     let text = new TextDecoder('latin1').decode(window.pako.inflate(stream.getContents()));
+
+    const font = await doc.embedFont(StandardFonts.TimesRoman);
+    const centerX = 454.765;
 
     const { superNo } = formatNomor(opts.noSurat);
     const tglSpd = formatIndoDate(opts.tglSpd);
@@ -459,11 +513,19 @@
 
     text = text.replace('B-114.21/7301/SS.330/2026', superNo);
     text = text.replace('pelaksanaan tanggal 20 Juli 2026', `pelaksanaan tanggal ${tglPelaksanaan}`);
-    text = text.replace('Kepulauan Selayar, 20 Juli 2026', `Kepulauan Selayar, ${tglSpd}`);
 
-    // Nama & NIP (Both top and signature bottom - tidak dicapslock, sesuai input/database)
-    text = text.replaceAll('NUR JANNAH', (opts.nama || 'Nur Jannah').trim());
-    text = text.replaceAll('7301034811760004', (opts.nip || '7301034811760004').trim());
+    const namaVal = (opts.nama || 'Nur Jannah').trim();
+    const nipVal = (opts.nip || '7301034811760004').trim();
+
+    // 1. Data di bagian atas (kiri)
+    text = text.replace(
+      'BT 163.293 674.662 Td /F1 11.2 Tf  [(NUR JANNAH)] TJ ET',
+      `BT 163.293 674.662 Td /F1 11.2 Tf  [(${escapePdfText(namaVal)})] TJ ET`
+    );
+    text = text.replace(
+      'BT 163.293 647.797 Td /F1 11.2 Tf  [(7301034811760004)] TJ ET',
+      `BT 163.293 647.797 Td /F1 11.2 Tf  [(${escapePdfText(nipVal)})] TJ ET`
+    );
 
     // Jabatan in Super
     const superJabatan = opts.isOrganik ? (opts.jabatan || 'Statistisi Ahli Pertama') : (opts.jabatanSuper || opts.jabatan || 'Mitra Sensus/Survei');
@@ -476,6 +538,33 @@
       const addition = targetUK + '\n' + `BT 163.293 594.067 Td /F1 11.2 Tf  [(${escapePdfText(unitKerjaVal)})] TJ ET`;
       text = text.replace(targetUK, addition);
     }
+
+    // 2. Blok Tanda Tangan Bawah (Presisi Rata Tengah / Centered)
+    const tglSpdStr = `Kepulauan Selayar, ${tglSpd}`;
+    const dateWidth = font.widthOfTextAtSize(tglSpdStr, 11.2);
+    const dateStartX = (centerX - (dateWidth / 2)).toFixed(3);
+    text = text.replace(
+      'BT 382.093 316.545 Td /F1 11.2 Tf  [(Kepulauan Selayar, 20 Juli 2026)] TJ ET',
+      `BT ${dateStartX} 316.545 Td /F1 11.2 Tf  [(${escapePdfText(tglSpdStr)})] TJ ET`
+    );
+
+    const namaWidth = font.widthOfTextAtSize(namaVal, 11.2);
+    const namaStartX = (centerX - (namaWidth / 2)).toFixed(3);
+    text = text.replace(
+      'BT 419.590 243.720 Td /F1 11.2 Tf  [(NUR JANNAH)] TJ ET',
+      `BT ${namaStartX} 243.720 Td /F1 11.2 Tf  [(${escapePdfText(namaVal)})] TJ ET`
+    );
+
+    let nipBottomStr = nipVal;
+    if (!/^(NIP|NIK)\.?\s*/i.test(nipBottomStr) && nipBottomStr) {
+      nipBottomStr = 'NIP. ' + nipBottomStr;
+    }
+    const nipWidth = font.widthOfTextAtSize(nipBottomStr, 11.2);
+    const nipStartX = (centerX - (nipWidth / 2)).toFixed(3);
+    text = text.replace(
+      'BT 398.490 227.355 Td /F1 11.2 Tf  [(NIP. 7301034811760004)] TJ ET',
+      `BT ${nipStartX} 227.355 Td /F1 11.2 Tf  [(${escapePdfText(nipBottomStr)})] TJ ET`
+    );
 
     page.node.set(PDFName.of('Contents'), doc.context.register(doc.context.flateStream(new TextEncoder().encode(text))));
     return doc;
@@ -514,6 +603,7 @@
         tglSpd: tglSpdVal,
         tglMulai: tglMulaiVal,
         tglSelesai: tglSelesaiVal,
+        kecamatanAsal: el.selectKecamatanAsal ? el.selectKecamatanAsal.value : 'Benteng',
         kecamatan: el.selectKecamatan.value || 'Bontomatene',
         tujuan: el.inputTujuan.value,
         pembebanan: el.inputPembebanan.value,
@@ -648,7 +738,8 @@
       {
         'Nomor Surat': 'B-11/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-20',
-        'Kecamatan': 'Bontomatene',
+        'Kecamatan Asal': 'Benteng',
+        'Kecamatan Tujuan': 'Bontomatene',
         'Kategori': 'Organik',
         'Nama Petugas': 'Ridson Al Farizal P., S.Tr.Stat.',
         'NIP': '200110192023101002',
@@ -662,13 +753,14 @@
       {
         'Nomor Surat': 'B-12/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-24',
-        'Kecamatan': 'Bontomatene',
+        'Kecamatan Asal': 'Benteng',
+        'Kecamatan Tujuan': 'Bontomatene',
         'Kategori': 'Non-Organik',
         'Nama Petugas': 'Nur Jannah',
         'NIP': '7301034811760004',
         'Jabatan': 'Mitra Sensus/Survei',
         'Tanggal Mulai': '2026-07-24',
-        'Tanggal Selesai': '2026-07-24',
+        'Tanggal Selesai': '2026-07-26',
         'Tujuan': 'Translok Petugas Pendataan SE2026 Menara Indah dan Bontolebang di Kecamatan Bontomatene',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
         'Uraian Pembebanan': 'Transport Daerah Sulit'
@@ -676,14 +768,15 @@
       {
         'Nomor Surat': 'B-13/7301/VS.330/2026',
         'Tanggal SPD': '2026-07-29',
-        'Kecamatan': 'Benteng',
+        'Kecamatan Asal': 'Benteng',
+        'Kecamatan Tujuan': 'Pasimarannu',
         'Kategori': 'Organik',
         'Nama Petugas': 'Takdir Khauripan, S.Si.',
         'NIP': '198704262011011006',
         'Jabatan': 'Kepala Subbagian Umum',
         'Tanggal Mulai': '2026-07-29',
-        'Tanggal Selesai': '2026-07-29',
-        'Tujuan': 'Koordinasi dan Evaluasi Administrasi di Kecamatan Benteng',
+        'Tanggal Selesai': '2026-07-31',
+        'Tujuan': 'Koordinasi dan Evaluasi Administrasi di Kecamatan Pasimarannu',
         'Pembebanan Akun': 'GG 2902 BMA 006 530 B 524113 2',
         'Uraian Pembebanan': 'Transport Daerah Sulit'
       }
@@ -747,7 +840,8 @@
           const noSurat = getVal(['nomor surat', 'no surat', 'nomor', 'no_surat']) || `B-${11 + idx}/7301/VS.330/2026`;
           const rawTglSpd = getVal(['tanggal spd', 'tgl spd', 'tanggal', 'tgl']);
           const tglSpd = parseExcelDate(rawTglSpd) || '2026-07-20';
-          const kecamatan = getVal(['kecamatan', 'wilayah']) || 'Bontomatene';
+          const kecamatanAsal = getVal(['kecamatan asal', 'asal', 'dari']) || 'Benteng';
+          const kecamatan = getVal(['kecamatan tujuan', 'tujuan kecamatan', 'kecamatan', 'wilayah', 'ke']) || 'Bontomatene';
           const tglMulai = parseExcelDate(getVal(['tanggal mulai', 'tgl mulai', 'mulai'])) || tglSpd;
           const tglSelesai = parseExcelDate(getVal(['tanggal selesai', 'tgl selesai', 'selesai'])) || tglMulai;
           
@@ -778,6 +872,7 @@
           return {
             noSurat: String(noSurat).trim(),
             tglSpd: String(tglSpd).trim(),
+            kecamatanAsal: String(kecamatanAsal).trim(),
             kecamatan: String(kecamatan).trim(),
             tglMulai: String(tglMulai).trim(),
             tglSelesai: String(tglSelesai).trim(),
@@ -813,11 +908,13 @@
         ? '<span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:600;font-size:0.7rem;">Organik</span>'
         : '<span style="background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-weight:600;font-size:0.7rem;">Mitra</span>';
 
+      const routeDisplay = row.kecamatanAsal ? `${row.kecamatanAsal} &rarr; ${row.kecamatan}` : row.kecamatan;
+
       tr.innerHTML = `
         <td>${i + 1}</td>
         <td><strong>${row.noSurat}</strong></td>
         <td>${formatIndoDate(row.tglSpd)}</td>
-        <td>${row.kecamatan}</td>
+        <td>${routeDisplay}</td>
         <td>${row.nama}</td>
         <td>${badgeHtml}</td>
       `;
@@ -1071,6 +1168,12 @@
       updateOrganikBadge();
       updateSummary();
     });
+
+    if (el.selectKecamatanAsal) {
+      el.selectKecamatanAsal.addEventListener('change', () => {
+        updateSummary();
+      });
+    }
 
     // Kecamatan change: auto update tujuan text if it contains standard template
     el.selectKecamatan.addEventListener('change', () => {
